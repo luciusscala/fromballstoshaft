@@ -54,12 +54,20 @@ export default function Home() {
               <p className="text-gray-600 mb-8">
                 You are successfully signed in with Supabase.
               </p>
-              <button
-                onClick={signOut}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                Sign Out
-              </button>
+              <div className="space-x-4">
+                <button
+                  onClick={() => router.push('/workspace')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Open Workspace
+                </button>
+                <button
+                  onClick={signOut}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
