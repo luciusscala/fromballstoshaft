@@ -1,11 +1,52 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
-import { Stage, Layer, Circle } from 'react-konva'
+import { Stage, Layer, Line } from 'react-konva'
 
 interface CanvasProps {
   width: number
   height: number
+}
+
+// Ultra-efficient static grid for buttery smooth performance
+function SimpleGrid({ stageWidth, stageHeight }: { stageWidth: number; stageHeight: number }) {
+  const lines = []
+  
+  // 3x bigger grid to ensure no whitespace even at max zoom out
+  const gridSize = Math.max(stageWidth, stageHeight) * 6 // 3x bigger than before
+  const spacing = 20
+  const startX = -gridSize / 2
+  const startY = -gridSize / 2
+  const endX = gridSize / 2
+  const endY = gridSize / 2
+
+  // Vertical lines - minimal DOM elements
+  for (let x = startX; x <= endX; x += spacing) {
+    lines.push(
+      <Line
+        key={`v-${x}`}
+        points={[x, startY, x, endY]}
+        stroke="#e2e8f0"
+        strokeWidth={0.5}
+        listening={false}
+      />
+    )
+  }
+
+  // Horizontal lines - minimal DOM elements
+  for (let y = startY; y <= endY; y += spacing) {
+    lines.push(
+      <Line
+        key={`h-${y}`}
+        points={[startX, y, endX, y]}
+        stroke="#e2e8f0"
+        strokeWidth={0.5}
+        listening={false}
+      />
+    )
+  }
+
+  return lines
 }
 
 export function Canvas({ width, height }: CanvasProps) {
@@ -14,11 +55,33 @@ export function Canvas({ width, height }: CanvasProps) {
   const [stageScale, setStageScale] = useState(1)
   const [isPanMode, setIsPanMode] = useState(true)
 
-  // Handle wheel zoom - much simpler
+  // Correct pan limits - ensures grid always covers viewport
+  const getPanLimits = useCallback(() => {
+    // Grid extends 3x viewport in each direction (6x total)
+    const gridSize = Math.max(width, height) * 6
+    const halfGrid = gridSize / 2 // 3x viewport radius
+    
+    // At current zoom level, how much world space does the viewport cover?
+    const viewportWorldWidth = width / stageScale
+    const viewportWorldHeight = height / stageScale
+    
+    // Pan limits: ensure viewport never goes beyond grid boundaries
+    // minX = gridLeft + viewportWidth/2 (so viewport right edge hits grid left)
+    // maxX = gridRight - viewportWidth/2 (so viewport left edge hits grid right)
+    const minX = -halfGrid + (viewportWorldWidth / 2)
+    const maxX = halfGrid - (viewportWorldWidth / 2)
+    const minY = -halfGrid + (viewportWorldHeight / 2)
+    const maxY = halfGrid - (viewportWorldHeight / 2)
+    
+    return { minX, maxX, minY, maxY }
+  }, [width, height, stageScale])
+
+  // Dampened wheel zoom with strict 50% minimum limit
   const handleWheel = useCallback((e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     e.evt.preventDefault()
     
-    const scaleBy = 1.1
+    // Dampened zoom sensitivity for smoother control
+    const scaleBy = 1.05 // Reduced from 1.1 for smoother zooming
     const stage = stageRef.current
     const oldScale = stage.scaleX()
     const pointer = stage.getPointerPosition()
@@ -31,23 +94,88 @@ export function Canvas({ width, height }: CanvasProps) {
     const deltaY = e.evt.deltaY
     const scaleFactor = deltaY > 0 ? scaleBy : 1 / scaleBy
     const newScale = oldScale * scaleFactor
-    const clampedScale = Math.max(0.1, Math.min(3, newScale))
+    
+    // Calculate max zoom to ensure grid always covers viewport
+    const gridSize = Math.max(width, height) * 6
+    const halfGrid = gridSize / 2
+    const maxViewportSize = Math.max(width, height)
+    const maxScale = (halfGrid * 2) / maxViewportSize // Grid diameter / viewport size
+    
+    // Strict limits: 0.5 (50%) minimum, calculated maximum
+    const clampedScale = Math.max(0.5, Math.min(maxScale, newScale))
+    
+    const newX = pointer.x - mousePointTo.x * clampedScale
+    const newY = pointer.y - mousePointTo.y * clampedScale
+    
+    // Apply pan limits
+    const limits = getPanLimits()
+    const constrainedX = Math.max(limits.minX, Math.min(limits.maxX, newX))
+    const constrainedY = Math.max(limits.minY, Math.min(limits.maxY, newY))
     
     setStageScale(clampedScale)
     setStagePosition({
-      x: pointer.x - mousePointTo.x * clampedScale,
-      y: pointer.y - mousePointTo.y * clampedScale,
+      x: constrainedX,
+      y: constrainedY,
     })
+  }, [getPanLimits, width, height])
+
+  // Handle stage drag start
+  const handleStageDragStart = useCallback(() => {
+    // Just ensure pan mode is active
   }, [])
 
-  // Simple zoom controls
-  const handleZoomIn = useCallback(() => {
-    setStageScale(prev => Math.min(3, prev * 1.2))
+  // Handle stage drag move with pan limits
+  const handleStageDragMove = useCallback(() => {
+    if (!isPanMode) return
+    
+    const stage = stageRef.current
+    const newPos = stage.position()
+    const limits = getPanLimits()
+    
+    // Constrain position to pan limits
+    const constrainedX = Math.max(limits.minX, Math.min(limits.maxX, newPos.x))
+    const constrainedY = Math.max(limits.minY, Math.min(limits.maxY, newPos.y))
+    
+    stage.position({ x: constrainedX, y: constrainedY })
+    setStagePosition({ x: constrainedX, y: constrainedY })
+  }, [isPanMode, getPanLimits])
+
+  // Handle stage drag end
+  const handleStageDragEnd = useCallback(() => {
+    // Update state to match actual position
+    const stage = stageRef.current
+    if (stage) {
+      setStagePosition({ x: stage.x(), y: stage.y() })
+    }
   }, [])
+
+  // Dampened zoom controls with proper limits
+  const handleZoomIn = useCallback(() => {
+    const gridSize = Math.max(width, height) * 6
+    const halfGrid = gridSize / 2
+    const maxViewportSize = Math.max(width, height)
+    const maxScale = (halfGrid * 2) / maxViewportSize
+    
+    const newScale = Math.min(maxScale, stageScale * 1.1)
+    
+    const limits = getPanLimits()
+    const constrainedX = Math.max(limits.minX, Math.min(limits.maxX, stagePosition.x))
+    const constrainedY = Math.max(limits.minY, Math.min(limits.maxY, stagePosition.y))
+    
+    setStageScale(newScale)
+    setStagePosition({ x: constrainedX, y: constrainedY })
+  }, [stageScale, stagePosition, getPanLimits, width, height])
 
   const handleZoomOut = useCallback(() => {
-    setStageScale(prev => Math.max(0.1, prev * 0.8))
-  }, [])
+    const newScale = Math.max(0.5, stageScale * 0.9) // 50% minimum
+    
+    const limits = getPanLimits()
+    const constrainedX = Math.max(limits.minX, Math.min(limits.maxX, stagePosition.x))
+    const constrainedY = Math.max(limits.minY, Math.min(limits.maxY, stagePosition.y))
+    
+    setStageScale(newScale)
+    setStagePosition({ x: constrainedX, y: constrainedY })
+  }, [stageScale, stagePosition, getPanLimits])
 
   const handleResetZoom = useCallback(() => {
     setStageScale(1)
@@ -70,36 +198,15 @@ export function Canvas({ width, height }: CanvasProps) {
         x={stagePosition.x}
         y={stagePosition.y}
         draggable={isPanMode}
+        onDragStart={handleStageDragStart}
+        onDragMove={handleStageDragMove}
+        onDragEnd={handleStageDragEnd}
         onWheel={handleWheel}
         className={isPanMode ? "cursor-grab active:cursor-grabbing" : "cursor-default"}
       >
         <Layer>
-          {/* Infinite dot grid using Konva */}
-          {(() => {
-            const dots = []
-            const spacing = 20
-            const gridSize = Math.max(width, height) * 3 // Much larger grid
-            const startX = -gridSize
-            const startY = -gridSize
-            const endX = gridSize
-            const endY = gridSize
-            
-            for (let x = startX; x <= endX; x += spacing) {
-              for (let y = startY; y <= endY; y += spacing) {
-                dots.push(
-                  <Circle
-                    key={`dot-${x}-${y}`}
-                    x={x}
-                    y={y}
-                    radius={1.5}
-                    fill="#d1d5db"
-                    listening={false}
-                  />
-                )
-              }
-            }
-            return dots
-          })()}
+          {/* Ultra-efficient static grid */}
+          <SimpleGrid stageWidth={width} stageHeight={height} />
         </Layer>
       </Stage>
 
