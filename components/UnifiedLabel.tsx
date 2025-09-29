@@ -172,11 +172,21 @@ function getLabelContent(block: FlightBlock) {
   const title = `${block.title} - ${block.departureAirport} → ${block.arrivalAirport}`;
   const subtitle = `${block.segments.length} segment${block.segments.length > 1 ? 's' : ''} • ${block.totalHours}h`;
   
-  // Add flight details
+  // Add flight details with date range
   const firstSegment = block.segments[0];
+  const lastSegment = block.segments[block.segments.length - 1];
   let details = '';
-  if (firstSegment) {
-    details = `${firstSegment.flight_number} (${firstSegment.departure_airport}→${firstSegment.arrival_airport})`;
+  
+  if (firstSegment && lastSegment) {
+    const startDate = new Date(firstSegment.departure_time).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric'
+    });
+    const endDate = new Date(lastSegment.arrival_time).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric'
+    });
+    details = `${firstSegment.flight_number} (${firstSegment.departure_airport}→${firstSegment.arrival_airport}) • ${startDate} - ${endDate}`;
   }
   
   return {

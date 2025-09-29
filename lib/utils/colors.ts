@@ -3,8 +3,8 @@
 export const getBlockColors = (blockType: string, isGrouped: boolean = false, relationshipType?: string) => {
   const baseColors = {
     flight: {
-      primary: '#3b82f6',
-      accent: '#ef4444',
+      primary: '#dc2626', // Cleaner red for outbound
+      accent: '#b91c1c', // Darker red for connecting
       secondary: '#f8fafc',
       text: '#1f2937',
       textSecondary: '#6b7280',
@@ -59,7 +59,7 @@ export const getBlockColors = (blockType: string, isGrouped: boolean = false, re
 
 // Get segment colors for flight blocks
 export const getSegmentColors = (colors: { primary: string; accent: string; textSecondary: string }) => ({
-  outbound: colors.primary,
-  return: colors.accent,
-  connecting: colors.textSecondary
+  outbound: colors.primary, // Red for outbound
+  return: '#f87171', // Light red/pink for return
+  connecting: colors.accent // Dark red for connecting
 });

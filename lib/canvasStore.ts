@@ -24,7 +24,7 @@ interface CanvasStore {
   setSelectedBlock: (id: string | null) => void
 }
 
-// Test flight data - Round trip with connections
+// Test flight data - Round trip with connections (freely positioned like canvas app)
 const createTestFlightData = (): FlightBlock => {
   const flightId = 'test-flight-1'
   
@@ -33,21 +33,21 @@ const createTestFlightData = (): FlightBlock => {
     user_id: 'test-user',
     price: '1,247.50',
     link: 'https://example.com/booking/AA123456',
-    // Canvas properties
+    // Canvas properties - freely positioned
     type: 'flight',
-    x: 200,
+    x: 200, // Free position on canvas
     y: 200,
-    width: 600,
+    width: 600, // Fixed width for the block
     height: 150,
     title: 'JFK → SFO (Round Trip)',
     color: '#f3f4f6',
-    totalHours: 168, // 7 days in hours
+    totalHours: 168, // 7 days in hours for internal scaling
     contextBarHeight: 24,
     segmentHeight: 80,
     departureAirport: 'JFK',
     arrivalAirport: 'JFK',
-    startHour: 0,
-    durationHours: 168,
+    startHour: 0, // Not used for positioning, just for internal scaling
+    durationHours: 168, // Not used for positioning, just for internal scaling
     segments: [
       // Outbound: JFK → LAX (with connection)
       {
@@ -62,7 +62,7 @@ const createTestFlightData = (): FlightBlock => {
         arrival_time: '2024-12-15T11:30:00Z',
         duration: '5.5',
         layover: '2.5',
-        startTime: 0,
+        startTime: 0, // Relative to flight start (0 hours into flight)
         type: 'outbound',
         label: 'AA123'
       },
@@ -77,7 +77,7 @@ const createTestFlightData = (): FlightBlock => {
         departure_time: '2024-12-15T14:00:00Z',
         arrival_time: '2024-12-15T15:30:00Z',
         duration: '1.5',
-        startTime: 8, // 8 hours from start (5.5 + 2.5 layover)
+        startTime: 8, // 8 hours from flight start (5.5 + 2.5 layover)
         type: 'connecting',
         label: 'AA456'
       },
@@ -95,7 +95,7 @@ const createTestFlightData = (): FlightBlock => {
         arrival_time: '2024-12-21T17:30:00Z',
         duration: '1.5',
         layover: '3.0',
-        startTime: 152, // 6 days + 16 hours from start
+        startTime: 152, // 6 days + 16 hours from flight start
         type: 'return',
         label: 'AA789'
       },
@@ -110,7 +110,7 @@ const createTestFlightData = (): FlightBlock => {
         departure_time: '2024-12-21T20:30:00Z',
         arrival_time: '2024-12-22T06:00:00Z',
         duration: '5.5',
-        startTime: 156.5, // 6 days + 20.5 hours from start
+        startTime: 156.5, // 6 days + 20.5 hours from flight start
         type: 'return',
         label: 'AA012'
       }

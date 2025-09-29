@@ -53,9 +53,87 @@ function SimpleGrid({ stageWidth, stageHeight }: { stageWidth: number; stageHeig
   return lines
 }
 
-// Enhanced Flight Block Component with canvas app aesthetic
+// Internal date markers for flight blocks (like in canvas app)
+function FlightDateMarkers({ 
+  block, 
+  x, 
+  y, 
+  width 
+}: { 
+  block: FlightBlock; 
+  x: number; 
+  y: number; 
+  width: number 
+}) {
+  // Get unique days from flight segments
+  const days = new Set<string>()
+  block.segments.forEach(segment => {
+    const date = new Date(segment.departure_time)
+    const dayKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    days.add(dayKey)
+  })
+  
+  const dayArray = Array.from(days).sort()
+  if (dayArray.length <= 1) return null
+
+  const dayWidth = width / dayArray.length
+  const indicatorHeight = 20
+  const indicatorY = y - indicatorHeight - 5
+
+  return (
+    <Group>
+      {/* Background for day indicators */}
+      <Rect
+        x={x}
+        y={indicatorY}
+        width={width}
+        height={indicatorHeight}
+        fill="rgba(255, 255, 255, 0.9)"
+        stroke="#e5e7eb"
+        strokeWidth={1}
+        cornerRadius={4}
+        listening={false}
+      />
+      
+      {/* Day separators and labels */}
+      {dayArray.map((day, index) => {
+        const dayX = x + (index * dayWidth)
+        const isLastDay = index === dayArray.length - 1
+        
+        return (
+          <Group key={day}>
+            {/* Vertical separator line (except for last day) */}
+            {!isLastDay && (
+              <Line
+                points={[dayX + dayWidth, indicatorY, dayX + dayWidth, indicatorY + indicatorHeight]}
+                stroke="#d1d5db"
+                strokeWidth={1}
+                listening={false}
+              />
+            )}
+            
+            {/* Day label */}
+            <Text
+              x={dayX + 8}
+              y={indicatorY + 6}
+              text={day}
+              fontSize={10}
+              fontFamily="Inter, system-ui, sans-serif"
+              fill="#6b7280"
+              fontStyle="bold"
+              width={dayWidth - 16}
+              align="center"
+              listening={false}
+            />
+          </Group>
+        )
+      })}
+    </Group>
+  )
+}
+
+// Flight Block Component - freely positioned like canvas app
 function FlightBlockComponent({ block }: { block: FlightBlock }) {
-  const [isHovered, setIsHovered] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
 
@@ -70,14 +148,6 @@ function FlightBlockComponent({ block }: { block: FlightBlock }) {
 
   const handleDragEnd = () => {
     setIsDragging(false)
-  }
-
-  const handleMouseEnter = () => {
-    setIsHovered(true)
-  }
-
-  const handleMouseLeave = () => {
-    setIsHovered(false)
   }
 
   const handleSegmentClick = (segmentId: string, e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -97,8 +167,6 @@ function FlightBlockComponent({ block }: { block: FlightBlock }) {
       onClick={handleClick}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       {/* Show unified label */}
       <UnifiedLabel
@@ -108,34 +176,32 @@ function FlightBlockComponent({ block }: { block: FlightBlock }) {
         width={block.width}
       />
 
-      {/* Context Bar - horizontal rectangle */}
+      {/* Internal date markers for this flight block */}
+      <FlightDateMarkers
+        block={block}
+        x={0}
+        y={0}
+        width={block.width}
+      />
+
+      {/* Context Bar - clean horizontal rectangle */}
       <Rect
         x={0}
         y={0}
         width={block.width}
         height={block.contextBarHeight}
-        fill="#f3f4f6"
-        stroke={isHovered ? colors.primary : '#d1d5db'}
-        strokeWidth={isHovered ? 2 : 1}
+        fill="#f1f5f9"
+        stroke="#e2e8f0"
+        strokeWidth={1}
         cornerRadius={4}
-        shadowColor="rgba(0, 0, 0, 0.1)"
-        shadowBlur={isHovered ? 6 : 3}
-        shadowOffset={{ x: 0, y: 2 }}
+        shadowColor="rgba(0, 0, 0, 0.05)"
+        shadowBlur={2}
+        shadowOffset={{ x: 0, y: 1 }}
         shadowOpacity={1}
         opacity={isDragging ? 0.9 : 1}
       />
-      
-      {/* Title */}
-      <Text
-        x={8}
-        y={4}
-        text={block.title}
-        fontSize={12}
-        fontFamily="Inter, system-ui, sans-serif"
-        fill={colors.text}
-      />
 
-      {/* Flight Segments */}
+      {/* Flight Segments - clean bars without labels */}
       {block.segments.map((segment) => {
         const segmentX = ((segment.startTime || 0) / block.totalHours) * block.width
         const segmentWidth = (parseFloat(segment.duration || '0') / block.totalHours) * block.width
@@ -143,31 +209,21 @@ function FlightBlockComponent({ block }: { block: FlightBlock }) {
         
         return (
           <Group key={segment.id}>
-            {/* Segment rectangle */}
+            {/* Segment rectangle - clean bar without text */}
             <Rect
               x={segmentX}
               y={0}
               width={segmentWidth}
               height={block.segmentHeight}
               fill={segmentColors[segment.type as keyof typeof segmentColors] || segmentColors.connecting}
-              stroke={isSelected ? '#fbbf24' : colors.text}
-              strokeWidth={isSelected ? 3 : 1}
-              cornerRadius={2}
+              stroke={isSelected ? '#fbbf24' : 'transparent'}
+              strokeWidth={isSelected ? 2 : 0}
+              cornerRadius={3}
               onClick={(e) => handleSegmentClick(segment.id, e)}
-              shadowColor="rgba(0, 0, 0, 0.2)"
-              shadowBlur={4}
+              shadowColor="rgba(0, 0, 0, 0.1)"
+              shadowBlur={2}
               shadowOffset={{ x: 0, y: 1 }}
               shadowOpacity={1}
-            />
-            
-            {/* Flight number label */}
-            <Text
-              x={segmentX + 4}
-              y={block.contextBarHeight + 4}
-              text={segment.flight_number || ''}
-              fontSize={10}
-              fontFamily="Inter, system-ui, sans-serif"
-              fill="#ffffff"
             />
           </Group>
         )
@@ -336,9 +392,9 @@ export function Canvas({ width, height }: CanvasProps) {
           {/* Ultra-efficient static grid */}
           <SimpleGrid stageWidth={width} stageHeight={height} />
           
-          {/* Render blocks */}
+          {/* Render blocks - freely positioned like canvas app */}
           {blocks.map((block: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-            if (block.type === 'flight') {
+            if ('type' in block && block.type === 'flight') {
               return (
                 <FlightBlockComponent
                   key={block.id}
