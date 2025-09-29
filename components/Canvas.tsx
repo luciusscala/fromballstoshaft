@@ -4,6 +4,8 @@ import { useRef, useState, useCallback } from 'react'
 import { Stage, Layer, Line, Rect, Text, Group } from 'react-konva'
 import { useCanvasStore } from '@/lib/canvasStore'
 import type { FlightBlock } from '@/lib/types/flight'
+import { UnifiedLabel } from './UnifiedLabel'
+import { getBlockColors, getSegmentColors } from '@/lib/utils/colors'
 
 interface CanvasProps {
   width: number
@@ -51,21 +53,41 @@ function SimpleGrid({ stageWidth, stageHeight }: { stageWidth: number; stageHeig
   return lines
 }
 
-// Simple Flight Block Component
+// Enhanced Flight Block Component with canvas app aesthetic
 function FlightBlockComponent({ block }: { block: FlightBlock }) {
+  const [isHovered, setIsHovered] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
+
   const handleClick = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     e.cancelBubble = true
     console.log('Flight block clicked:', block.id)
   }
 
-  const getSegmentColors = (type: string) => {
-    switch (type) {
-      case 'outbound': return '#3b82f6'
-      case 'return': return '#ef4444'
-      case 'connecting': return '#6b7280'
-      default: return '#9ca3af'
-    }
+  const handleDragStart = () => {
+    setIsDragging(true)
   }
+
+  const handleDragEnd = () => {
+    setIsDragging(false)
+  }
+
+  const handleMouseEnter = () => {
+    setIsHovered(true)
+  }
+
+  const handleMouseLeave = () => {
+    setIsHovered(false)
+  }
+
+  const handleSegmentClick = (segmentId: string, e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    e.cancelBubble = true
+    setSelectedSegmentId(segmentId)
+  }
+
+  // Get colors for this block
+  const colors = getBlockColors('flight', false)
+  const segmentColors = getSegmentColors(colors)
 
   return (
     <Group
@@ -73,7 +95,19 @@ function FlightBlockComponent({ block }: { block: FlightBlock }) {
       y={block.y}
       draggable
       onClick={handleClick}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
+      {/* Show unified label */}
+      <UnifiedLabel
+        block={block}
+        x={0}
+        y={0}
+        width={block.width}
+      />
+
       {/* Context Bar - horizontal rectangle */}
       <Rect
         x={0}
@@ -81,9 +115,14 @@ function FlightBlockComponent({ block }: { block: FlightBlock }) {
         width={block.width}
         height={block.contextBarHeight}
         fill="#f3f4f6"
-        stroke="#d1d5db"
-        strokeWidth={1}
+        stroke={isHovered ? colors.primary : '#d1d5db'}
+        strokeWidth={isHovered ? 2 : 1}
         cornerRadius={4}
+        shadowColor="rgba(0, 0, 0, 0.1)"
+        shadowBlur={isHovered ? 6 : 3}
+        shadowOffset={{ x: 0, y: 2 }}
+        shadowOpacity={1}
+        opacity={isDragging ? 0.9 : 1}
       />
       
       {/* Title */}
@@ -93,13 +132,14 @@ function FlightBlockComponent({ block }: { block: FlightBlock }) {
         text={block.title}
         fontSize={12}
         fontFamily="Inter, system-ui, sans-serif"
-        fill="#1f2937"
+        fill={colors.text}
       />
 
       {/* Flight Segments */}
       {block.segments.map((segment) => {
         const segmentX = ((segment.startTime || 0) / block.totalHours) * block.width
         const segmentWidth = (parseFloat(segment.duration || '0') / block.totalHours) * block.width
+        const isSelected = selectedSegmentId === segment.id
         
         return (
           <Group key={segment.id}>
@@ -109,10 +149,15 @@ function FlightBlockComponent({ block }: { block: FlightBlock }) {
               y={0}
               width={segmentWidth}
               height={block.segmentHeight}
-              fill={getSegmentColors(segment.type || 'connecting')}
-              stroke="#ffffff"
-              strokeWidth={1}
+              fill={segmentColors[segment.type as keyof typeof segmentColors] || segmentColors.connecting}
+              stroke={isSelected ? '#fbbf24' : colors.text}
+              strokeWidth={isSelected ? 3 : 1}
               cornerRadius={2}
+              onClick={(e) => handleSegmentClick(segment.id, e)}
+              shadowColor="rgba(0, 0, 0, 0.2)"
+              shadowBlur={4}
+              shadowOffset={{ x: 0, y: 1 }}
+              shadowOpacity={1}
             />
             
             {/* Flight number label */}
