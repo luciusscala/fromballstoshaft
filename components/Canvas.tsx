@@ -1,7 +1,9 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
-import { Stage, Layer, Line } from 'react-konva'
+import { Stage, Layer, Line, Rect, Text, Group } from 'react-konva'
+import { useCanvasStore } from '@/lib/canvasStore'
+import type { FlightBlock } from '@/lib/types/flight'
 
 interface CanvasProps {
   width: number
@@ -49,11 +51,92 @@ function SimpleGrid({ stageWidth, stageHeight }: { stageWidth: number; stageHeig
   return lines
 }
 
+// Simple Flight Block Component
+function FlightBlockComponent({ block }: { block: FlightBlock }) {
+  const handleClick = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    e.cancelBubble = true
+    console.log('Flight block clicked:', block.id)
+  }
+
+  const getSegmentColors = (type: string) => {
+    switch (type) {
+      case 'outbound': return '#3b82f6'
+      case 'return': return '#ef4444'
+      case 'connecting': return '#6b7280'
+      default: return '#9ca3af'
+    }
+  }
+
+  return (
+    <Group
+      x={block.x}
+      y={block.y}
+      draggable
+      onClick={handleClick}
+    >
+      {/* Context Bar - horizontal rectangle */}
+      <Rect
+        x={0}
+        y={0}
+        width={block.width}
+        height={block.contextBarHeight}
+        fill="#f3f4f6"
+        stroke="#d1d5db"
+        strokeWidth={1}
+        cornerRadius={4}
+      />
+      
+      {/* Title */}
+      <Text
+        x={8}
+        y={4}
+        text={block.title}
+        fontSize={12}
+        fontFamily="Inter, system-ui, sans-serif"
+        fill="#1f2937"
+      />
+
+      {/* Flight Segments */}
+      {block.segments.map((segment) => {
+        const segmentX = ((segment.startTime || 0) / block.totalHours) * block.width
+        const segmentWidth = (parseFloat(segment.duration || '0') / block.totalHours) * block.width
+        
+        return (
+          <Group key={segment.id}>
+            {/* Segment rectangle */}
+            <Rect
+              x={segmentX}
+              y={0}
+              width={segmentWidth}
+              height={block.segmentHeight}
+              fill={getSegmentColors(segment.type || 'connecting')}
+              stroke="#ffffff"
+              strokeWidth={1}
+              cornerRadius={2}
+            />
+            
+            {/* Flight number label */}
+            <Text
+              x={segmentX + 4}
+              y={block.contextBarHeight + 4}
+              text={segment.flight_number || ''}
+              fontSize={10}
+              fontFamily="Inter, system-ui, sans-serif"
+              fill="#ffffff"
+            />
+          </Group>
+        )
+      })}
+    </Group>
+  )
+}
+
 export function Canvas({ width, height }: CanvasProps) {
   const stageRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 })
   const [stageScale, setStageScale] = useState(1)
   const [isPanMode, setIsPanMode] = useState(true)
+  const { blocks } = useCanvasStore()
 
   // Correct pan limits - ensures grid always covers viewport
   const getPanLimits = useCallback(() => {
@@ -207,6 +290,19 @@ export function Canvas({ width, height }: CanvasProps) {
         <Layer>
           {/* Ultra-efficient static grid */}
           <SimpleGrid stageWidth={width} stageHeight={height} />
+          
+          {/* Render blocks */}
+          {blocks.map((block: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+            if (block.type === 'flight') {
+              return (
+                <FlightBlockComponent
+                  key={block.id}
+                  block={block as FlightBlock}
+                />
+              )
+            }
+            return null
+          })}
         </Layer>
       </Stage>
 
