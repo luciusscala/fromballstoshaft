@@ -1,30 +1,22 @@
-'use client'
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { Stage, Layer, Text, Line } from 'react-konva';
+import { useCanvasStore } from '../lib/canvasStore';
+import { FlightBlock } from './FlightBlock';
+import type { FlightBlock as FlightBlockType, FlightSegment } from '../lib/types/index';
+import { createDateRange, calculateHoursFromTripStart, calculateBlockPosition } from '../lib/utils/timeUtils';
 
-import { useRef, useState, useCallback } from 'react'
-import { Stage, Layer, Line, Rect, Text, Group } from 'react-konva'
-import { useCanvasStore } from '@/lib/canvasStore'
-import type { FlightBlock } from '@/lib/types/flight'
-import { UnifiedLabel } from './UnifiedLabel'
-import { getBlockColors, getSegmentColors } from '@/lib/utils/colors'
-
-interface CanvasProps {
-  width: number
-  height: number
-}
-
-// Ultra-efficient static grid for buttery smooth performance
-function SimpleGrid({ stageWidth, stageHeight }: { stageWidth: number; stageHeight: number }) {
-  const lines = []
+// Efficient grid that covers the entire viewport
+function SimpleGrid({ stageWidth, stageHeight, spacing = 20 }: { stageWidth: number; stageHeight: number; spacing?: number }) {
+  const lines = [];
   
-  // 3x bigger grid to ensure no whitespace even at max zoom out
-  const gridSize = Math.max(stageWidth, stageHeight) * 6 // 3x bigger than before
-  const spacing = 20
-  const startX = -gridSize / 2
-  const startY = -gridSize / 2
-  const endX = gridSize / 2
-  const endY = gridSize / 2
+  // Calculate grid bounds based on current viewport
+  const gridSize = Math.max(stageWidth, stageHeight) * 2; // 2x viewport for panning
+  const startX = -gridSize / 2;
+  const startY = -gridSize / 2;
+  const endX = gridSize / 2;
+  const endY = gridSize / 2;
 
-  // Vertical lines - minimal DOM elements
+  // Vertical lines
   for (let x = startX; x <= endX; x += spacing) {
     lines.push(
       <Line
@@ -32,12 +24,12 @@ function SimpleGrid({ stageWidth, stageHeight }: { stageWidth: number; stageHeig
         points={[x, startY, x, endY]}
         stroke="#e2e8f0"
         strokeWidth={0.5}
-        listening={false}
+        listening={false} // Don't interfere with mouse events
       />
-    )
+    );
   }
 
-  // Horizontal lines - minimal DOM elements
+  // Horizontal lines
   for (let y = startY; y <= endY; y += spacing) {
     lines.push(
       <Line
@@ -45,408 +37,298 @@ function SimpleGrid({ stageWidth, stageHeight }: { stageWidth: number; stageHeig
         points={[startX, y, endX, y]}
         stroke="#e2e8f0"
         strokeWidth={0.5}
-        listening={false}
+        listening={false} // Don't interfere with mouse events
       />
-    )
+    );
   }
 
-  return lines
+  return lines;
 }
 
-// Internal date markers for flight blocks (like in canvas app)
-function FlightDateMarkers({ 
-  block, 
-  x, 
-  y, 
-  width 
-}: { 
-  block: FlightBlock; 
-  x: number; 
-  y: number; 
-  width: number 
-}) {
-  // Get unique days from flight segments
-  const days = new Set<string>()
-  block.segments.forEach(segment => {
-    const date = new Date(segment.departure_time)
-    const dayKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    days.add(dayKey)
-  })
-  
-  const dayArray = Array.from(days).sort()
-  if (dayArray.length <= 1) return null
-
-  const dayWidth = width / dayArray.length
-  const indicatorHeight = 20
-  const indicatorY = y - indicatorHeight - 5
-
-  return (
-    <Group>
-      {/* Background for day indicators */}
-      <Rect
-        x={x}
-        y={indicatorY}
-        width={width}
-        height={indicatorHeight}
-        fill="rgba(255, 255, 255, 0.9)"
-        stroke="#e5e7eb"
-        strokeWidth={1}
-        cornerRadius={4}
-        listening={false}
-      />
-      
-      {/* Day separators and labels */}
-      {dayArray.map((day, index) => {
-        const dayX = x + (index * dayWidth)
-        const isLastDay = index === dayArray.length - 1
-        
-        return (
-          <Group key={day}>
-            {/* Vertical separator line (except for last day) */}
-            {!isLastDay && (
-              <Line
-                points={[dayX + dayWidth, indicatorY, dayX + dayWidth, indicatorY + indicatorHeight]}
-                stroke="#d1d5db"
-                strokeWidth={1}
-                listening={false}
-              />
-            )}
-            
-            {/* Day label */}
-            <Text
-              x={dayX + 8}
-              y={indicatorY + 6}
-              text={day}
-              fontSize={10}
-              fontFamily="Inter, system-ui, sans-serif"
-              fill="#6b7280"
-              fontStyle="bold"
-              width={dayWidth - 16}
-              align="center"
-              listening={false}
-            />
-          </Group>
-        )
-      })}
-    </Group>
-  )
-}
-
-// Flight Block Component - freely positioned like canvas app
-function FlightBlockComponent({ block }: { block: FlightBlock }) {
-  const [isDragging, setIsDragging] = useState(false)
-  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
-
-  const handleClick = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    e.cancelBubble = true
-    console.log('Flight block clicked:', block.id)
-  }
-
-  const handleDragStart = () => {
-    setIsDragging(true)
-  }
-
-  const handleDragEnd = () => {
-    setIsDragging(false)
-  }
-
-  const handleSegmentClick = (segmentId: string, e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    e.cancelBubble = true
-    setSelectedSegmentId(segmentId)
-  }
-
-  // Get colors for this block
-  const colors = getBlockColors('flight', false)
-  const segmentColors = getSegmentColors(colors)
-
-  return (
-    <Group
-      x={block.x}
-      y={block.y}
-      draggable
-      onClick={handleClick}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      {/* Show unified label */}
-      <UnifiedLabel
-        block={block}
-        x={0}
-        y={0}
-        width={block.width}
-      />
-
-      {/* Internal date markers for this flight block */}
-      <FlightDateMarkers
-        block={block}
-        x={0}
-        y={0}
-        width={block.width}
-      />
-
-      {/* Context Bar - clean horizontal rectangle */}
-      <Rect
-        x={0}
-        y={0}
-        width={block.width}
-        height={block.contextBarHeight}
-        fill="#f1f5f9"
-        stroke="#e2e8f0"
-        strokeWidth={1}
-        cornerRadius={4}
-        shadowColor="rgba(0, 0, 0, 0.05)"
-        shadowBlur={2}
-        shadowOffset={{ x: 0, y: 1 }}
-        shadowOpacity={1}
-        opacity={isDragging ? 0.9 : 1}
-      />
-
-      {/* Flight Segments - clean bars without labels */}
-      {block.segments.map((segment) => {
-        const segmentX = ((segment.startTime || 0) / block.totalHours) * block.width
-        const segmentWidth = (parseFloat(segment.duration || '0') / block.totalHours) * block.width
-        const isSelected = selectedSegmentId === segment.id
-        
-        return (
-          <Group key={segment.id}>
-            {/* Segment rectangle - clean bar without text */}
-            <Rect
-              x={segmentX}
-              y={0}
-              width={segmentWidth}
-              height={block.segmentHeight}
-              fill={segmentColors[segment.type as keyof typeof segmentColors] || segmentColors.connecting}
-              stroke={isSelected ? '#fbbf24' : 'transparent'}
-              strokeWidth={isSelected ? 2 : 0}
-              cornerRadius={3}
-              onClick={(e) => handleSegmentClick(segment.id, e)}
-              shadowColor="rgba(0, 0, 0, 0.1)"
-              shadowBlur={2}
-              shadowOffset={{ x: 0, y: 1 }}
-              shadowOpacity={1}
-            />
-          </Group>
-        )
-      })}
-    </Group>
-  )
+interface CanvasProps {
+  width: number;
+  height: number;
 }
 
 export function Canvas({ width, height }: CanvasProps) {
-  const stageRef = useRef<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
-  const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 })
-  const [stageScale, setStageScale] = useState(1)
-  const [isPanMode, setIsPanMode] = useState(true)
-  const { blocks } = useCanvasStore()
+  const stageRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [stageSize, setStageSize] = useState({ width, height });
+  const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
+  const [stageScale, setStageScale] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
+  const [isDraggingBlock, setIsDraggingBlock] = useState(false);
+  const [lastPointerPosition, setLastPointerPosition] = useState({ x: 0, y: 0 });
 
-  // Correct pan limits - ensures grid always covers viewport
-  const getPanLimits = useCallback(() => {
-    // Grid extends 3x viewport in each direction (6x total)
-    const gridSize = Math.max(width, height) * 6
-    const halfGrid = gridSize / 2 // 3x viewport radius
-    
-    // At current zoom level, how much world space does the viewport cover?
-    const viewportWorldWidth = width / stageScale
-    const viewportWorldHeight = height / stageScale
-    
-    // Pan limits: ensure viewport never goes beyond grid boundaries
-    // minX = gridLeft + viewportWidth/2 (so viewport right edge hits grid left)
-    // maxX = gridRight - viewportWidth/2 (so viewport left edge hits grid right)
-    const minX = -halfGrid + (viewportWorldWidth / 2)
-    const maxX = halfGrid - (viewportWorldWidth / 2)
-    const minY = -halfGrid + (viewportWorldHeight / 2)
-    const maxY = halfGrid - (viewportWorldHeight / 2)
-    
-    return { minX, maxX, minY, maxY }
-  }, [width, height, stageScale])
+  const { blocks, addBlock, updateBlock, tripTimeline, initializeTripTimeline } = useCanvasStore();
 
-  // Dampened wheel zoom with strict 50% minimum limit
+  // Initialize trip timeline on component mount
+  useEffect(() => {
+    if (!tripTimeline) {
+      // Create a 7-day trip from Dec 15-22, 2024
+      const startDate = new Date('2024-12-15T00:00:00');
+      const endDate = new Date('2024-12-22T23:59:59');
+      initializeTripTimeline(startDate, endDate, 5); // 5 pixels per hour for smaller units
+    }
+  }, [tripTimeline, initializeTripTimeline]);
+
+  // Update stage size when props change
+  useEffect(() => {
+    setStageSize({ width, height });
+  }, [width, height]);
+
+  // Callback to communicate drag state to blocks
+  const handleBlockDragStart = useCallback(() => {
+    setIsDraggingBlock(true);
+  }, []);
+
+  const handleBlockDragEnd = useCallback((snapResult: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    setIsDraggingBlock(false);
+    
+    // If this is a parent move with child positions, update all child blocks
+    if (snapResult?.childPositions) {
+      snapResult.childPositions.forEach((childPos: { id: string; newX: number; newY: number }) => {
+        updateBlock(childPos.id, {
+          x: childPos.newX,
+          y: childPos.newY
+        });
+      });
+    }
+  }, [updateBlock]);
+
+  // Create a sample flight block with date-based positioning
+  const createFlightBlock = useCallback((_x: number, y: number): FlightBlockType => {
+    if (!tripTimeline) {
+      throw new Error('Trip timeline not initialized');
+    }
+
+    // Flight dates: Dec 15 departure, Dec 21 return
+    const departureDate = new Date('2024-12-15T08:00:00');
+    const returnDate = new Date('2024-12-21T18:00:00');
+    
+    const startHour = calculateHoursFromTripStart(departureDate, tripTimeline.startDate);
+    const endHour = calculateHoursFromTripStart(returnDate, tripTimeline.startDate);
+    const durationHours = endHour - startHour;
+
+    const segments: FlightSegment[] = [
+      {
+        id: `segment-${Date.now()}-1`,
+        startTime: 0, // Relative to flight start (0 hours into flight)
+        duration: 2.5, // 2.5 hours
+        type: 'outbound',
+        flightNumber: 'AA123',
+        departure: 'JFK',
+        arrival: 'LAX',
+        label: 'AA123',
+        startHour: 0, // Relative to flight start
+        durationHours: 2.5,
+        dateRange: createDateRange(departureDate, new Date(departureDate.getTime() + 2.5 * 60 * 60 * 1000))
+      },
+      {
+        id: `segment-${Date.now()}-2`,
+        startTime: 2.5, // 2.5 hours into flight
+        duration: 1.5, // 1.5 hours
+        type: 'connecting',
+        flightNumber: 'AA456',
+        departure: 'LAX',
+        arrival: 'SFO',
+        label: 'AA456',
+        startHour: 2.5, // Relative to flight start
+        durationHours: 1.5,
+        dateRange: createDateRange(
+          new Date(departureDate.getTime() + 2.5 * 60 * 60 * 1000),
+          new Date(departureDate.getTime() + 4 * 60 * 60 * 1000)
+        )
+      },
+      {
+        id: `segment-${Date.now()}-3`,
+        startTime: durationHours - 5.5, // 5.5 hours before flight end
+        duration: 5.5, // 5.5 hours
+        type: 'return',
+        flightNumber: 'AA789',
+        departure: 'SFO',
+        arrival: 'JFK',
+        label: 'AA789',
+        startHour: durationHours - 5.5, // Relative to flight start
+        durationHours: 5.5,
+        dateRange: createDateRange(
+          new Date(returnDate.getTime() - 5.5 * 60 * 60 * 1000),
+          returnDate
+        )
+      }
+    ];
+
+    // Calculate position based on time
+    const position = calculateBlockPosition(startHour, durationHours, tripTimeline.scale);
+
+    return {
+      id: `flight-${Date.now()}`,
+      type: 'flight',
+      x: position.x,
+      y: y,
+      width: position.width,
+      height: 150,
+      title: 'Round Trip Flight',
+      totalHours: durationHours,
+      segments,
+      contextBarHeight: 24,
+      segmentHeight: 80,
+      departureAirport: 'JFK',
+      arrivalAirport: 'JFK',
+      color: '#f3f4f6',
+      // New date-based properties
+      startHour,
+      durationHours,
+      dateRange: createDateRange(departureDate, returnDate)
+    };
+  }, [tripTimeline]);
+
+  // Handle stage drag (panning) - only when not dragging blocks
+  const handleStageDragStart = useCallback(() => {
+    // Only start panning if we're not dragging a block
+    if (isDraggingBlock) return;
+    
+    setIsPanning(true);
+    setLastPointerPosition(stageRef.current.getPointerPosition());
+  }, [isDraggingBlock]);
+
+  const handleStageDragMove = useCallback(() => {
+    if (!isPanning || isDraggingBlock) return;
+
+    const stage = stageRef.current;
+    const newPos = stage.getPointerPosition();
+    const deltaX = newPos.x - lastPointerPosition.x;
+    const deltaY = newPos.y - lastPointerPosition.y;
+
+    // Apply pan sensitivity reduction
+    const panSensitivity = 0.6; // Much lower = much less sensitive (0.5-1.0 range)
+    const adjustedDeltaX = deltaX * panSensitivity;
+    const adjustedDeltaY = deltaY * panSensitivity;
+
+    // Update stage position directly for smooth panning
+    stage.x(stage.x() + adjustedDeltaX);
+    stage.y(stage.y() + adjustedDeltaY);
+    
+    // Update state for consistency
+    setStagePosition({
+      x: stage.x(),
+      y: stage.y()
+    });
+
+    setLastPointerPosition(newPos);
+  }, [isPanning, isDraggingBlock, lastPointerPosition]);
+
+  const handleStageDragEnd = useCallback(() => {
+    setIsPanning(false);
+  }, []);
+
+  // Handle wheel zoom - default sensitivity
   const handleWheel = useCallback((e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    e.evt.preventDefault()
-    
-    // Dampened zoom sensitivity for smoother control
-    const scaleBy = 1.05 // Reduced from 1.1 for smoother zooming
-    const stage = stageRef.current
-    const oldScale = stage.scaleX()
-    const pointer = stage.getPointerPosition()
-    
+    e.evt.preventDefault();
+
+    const scaleBy = 1.1; // Default Konva sensitivity
+    const stage = stageRef.current;
+    const oldScale = stage.scaleX();
+    const pointer = stage.getPointerPosition();
+
     const mousePointTo = {
       x: (pointer.x - stage.x()) / oldScale,
       y: (pointer.y - stage.y()) / oldScale,
-    }
+    };
+
+    const deltaY = e.evt.deltaY;
+    const scaleFactor = deltaY > 0 ? scaleBy : 1 / scaleBy;
     
-    const deltaY = e.evt.deltaY
-    const scaleFactor = deltaY > 0 ? scaleBy : 1 / scaleBy
-    const newScale = oldScale * scaleFactor
-    
-    // Calculate max zoom to ensure grid always covers viewport
-    const gridSize = Math.max(width, height) * 6
-    const halfGrid = gridSize / 2
-    const maxViewportSize = Math.max(width, height)
-    const maxScale = (halfGrid * 2) / maxViewportSize // Grid diameter / viewport size
-    
-    // Strict limits: 0.5 (50%) minimum, calculated maximum
-    const clampedScale = Math.max(0.5, Math.min(maxScale, newScale))
-    
-    const newX = pointer.x - mousePointTo.x * clampedScale
-    const newY = pointer.y - mousePointTo.y * clampedScale
-    
-    // Apply pan limits
-    const limits = getPanLimits()
-    const constrainedX = Math.max(limits.minX, Math.min(limits.maxX, newX))
-    const constrainedY = Math.max(limits.minY, Math.min(limits.maxY, newY))
-    
-    setStageScale(clampedScale)
+    const newScale = oldScale * scaleFactor;
+    const clampedScale = Math.max(0.1, Math.min(3, newScale));
+
+    setStageScale(clampedScale);
     setStagePosition({
-      x: constrainedX,
-      y: constrainedY,
-    })
-  }, [getPanLimits, width, height])
+      x: pointer.x - mousePointTo.x * clampedScale,
+      y: pointer.y - mousePointTo.y * clampedScale,
+    });
+  }, []);
 
-  // Handle stage drag start
-  const handleStageDragStart = useCallback(() => {
-    // Just ensure pan mode is active
-  }, [])
+  // Handle double click to add blocks
+  const handleStageClick = useCallback((e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (e.evt.detail === 2) { // Double click
+      const stage = stageRef.current;
+      const pointer = stage.getPointerPosition();
+      
+      // Convert stage coordinates to world coordinates
+      const x = (pointer.x - stagePosition.x) / stageScale;
+      const y = (pointer.y - stagePosition.y) / stageScale;
+      
+      // Snap to grid
+      const snappedX = Math.round(x / 20) * 20;
+      const snappedY = Math.round(y / 20) * 20;
 
-  // Handle stage drag move with pan limits
-  const handleStageDragMove = useCallback(() => {
-    if (!isPanMode) return
-    
-    const stage = stageRef.current
-    const newPos = stage.position()
-    const limits = getPanLimits()
-    
-    // Constrain position to pan limits
-    const constrainedX = Math.max(limits.minX, Math.min(limits.maxX, newPos.x))
-    const constrainedY = Math.max(limits.minY, Math.min(limits.maxY, newPos.y))
-    
-    stage.position({ x: constrainedX, y: constrainedY })
-    setStagePosition({ x: constrainedX, y: constrainedY })
-  }, [isPanMode, getPanLimits])
-
-  // Handle stage drag end
-  const handleStageDragEnd = useCallback(() => {
-    // Update state to match actual position
-    const stage = stageRef.current
-    if (stage) {
-      setStagePosition({ x: stage.x(), y: stage.y() })
+      // Create a flight block
+      const flightBlock = createFlightBlock(snappedX, snappedY);
+      addBlock(flightBlock);
     }
-  }, [])
-
-  // Dampened zoom controls with proper limits
-  const handleZoomIn = useCallback(() => {
-    const gridSize = Math.max(width, height) * 6
-    const halfGrid = gridSize / 2
-    const maxViewportSize = Math.max(width, height)
-    const maxScale = (halfGrid * 2) / maxViewportSize
-    
-    const newScale = Math.min(maxScale, stageScale * 1.1)
-    
-    const limits = getPanLimits()
-    const constrainedX = Math.max(limits.minX, Math.min(limits.maxX, stagePosition.x))
-    const constrainedY = Math.max(limits.minY, Math.min(limits.maxY, stagePosition.y))
-    
-    setStageScale(newScale)
-    setStagePosition({ x: constrainedX, y: constrainedY })
-  }, [stageScale, stagePosition, getPanLimits, width, height])
-
-  const handleZoomOut = useCallback(() => {
-    const newScale = Math.max(0.5, stageScale * 0.9) // 50% minimum
-    
-    const limits = getPanLimits()
-    const constrainedX = Math.max(limits.minX, Math.min(limits.maxX, stagePosition.x))
-    const constrainedY = Math.max(limits.minY, Math.min(limits.maxY, stagePosition.y))
-    
-    setStageScale(newScale)
-    setStagePosition({ x: constrainedX, y: constrainedY })
-  }, [stageScale, stagePosition, getPanLimits])
-
-  const handleResetZoom = useCallback(() => {
-    setStageScale(1)
-    setStagePosition({ x: 0, y: 0 })
-  }, [])
-
-  const togglePanMode = useCallback(() => {
-    setIsPanMode(prev => !prev)
-  }, [])
+  }, [stagePosition, stageScale, addBlock, createFlightBlock]);
 
   return (
-    <div className="w-full h-full bg-white relative overflow-hidden">
-      {/* Konva Stage with Grid - Everything in one place */}
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
+      {/* Canvas Area */}
+      <div className="flex-1 relative">
+        {/* Instructions */}
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200 z-10">
+          <p className="text-sm text-gray-600">
+            <strong>Canvas Controls:</strong><br />
+            • Double-click to add flight blocks<br />
+            • Drag to pan, scroll to zoom<br />
+            • Drag blocks to move them
+          </p>
+        </div>
+
       <Stage
         ref={stageRef}
-        width={width}
-        height={height}
+        width={stageSize.width}
+        height={stageSize.height}
         scaleX={stageScale}
         scaleY={stageScale}
         x={stagePosition.x}
         y={stagePosition.y}
-        draggable={isPanMode}
+        draggable={!isDraggingBlock}
         onDragStart={handleStageDragStart}
         onDragMove={handleStageDragMove}
         onDragEnd={handleStageDragEnd}
         onWheel={handleWheel}
-        className={isPanMode ? "cursor-grab active:cursor-grabbing" : "cursor-default"}
+        onClick={handleStageClick}
+        className={isDraggingBlock ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
       >
         <Layer>
-          {/* Ultra-efficient static grid */}
-          <SimpleGrid stageWidth={width} stageHeight={height} />
+          {/* Grid background */}
+          <SimpleGrid stageWidth={stageSize.width} stageHeight={stageSize.height} />
           
-          {/* Render blocks - freely positioned like canvas app */}
-          {blocks.map((block: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          {/* Instructions text */}
+          <Text
+            x={20}
+            y={20}
+            text="Double-click to add flight blocks • Drag to pan • Scroll to zoom"
+            fontSize={14}
+            fill="#64748b"
+            listening={false}
+          />
+          
+          {/* Render blocks */}
+          {blocks.map((block) => {
             if ('type' in block && block.type === 'flight') {
               return (
-                <FlightBlockComponent
+                <FlightBlock
                   key={block.id}
-                  block={block as FlightBlock}
+                  block={block as FlightBlockType}
+                  onDragStart={handleBlockDragStart}
+                  onDragEnd={() => handleBlockDragEnd({})}
                 />
-              )
+              );
             }
-            return null
+            return null;
           })}
         </Layer>
       </Stage>
-
-      {/* Tool controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-        {/* Pan mode toggle */}
-        <button
-          onClick={togglePanMode}
-          className={`w-8 h-8 border rounded shadow-sm flex items-center justify-center text-xs font-medium ${
-            isPanMode 
-              ? 'bg-indigo-600 text-white border-indigo-600' 
-              : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-          }`}
-          title={isPanMode ? 'Pan mode active' : 'Click to enable pan mode'}
-        >
-          ✋
-        </button>
-        
-        {/* Zoom controls */}
-        <button
-          onClick={handleZoomIn}
-          className="w-8 h-8 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 flex items-center justify-center text-gray-600"
-        >
-          +
-        </button>
-        <button
-          onClick={handleZoomOut}
-          className="w-8 h-8 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 flex items-center justify-center text-gray-600"
-        >
-          −
-        </button>
-        <button
-          onClick={handleResetZoom}
-          className="w-8 h-8 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 flex items-center justify-center text-gray-600 text-xs"
-        >
-          ⌂
-        </button>
-      </div>
-
-      {/* Zoom indicator */}
-      <div className="absolute bottom-4 right-4 bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-600 shadow-sm">
-        {Math.round(stageScale * 100)}%
       </div>
     </div>
-  )
+  );
 }
