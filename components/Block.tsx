@@ -1,8 +1,10 @@
-// Block component for all types
+// Base Block component with common functionality
 import { useState } from 'react';
-import { Group, Rect, Text } from 'react-konva';
 import type { Block } from '../lib/types/block';
 import { useCanvasStore } from '../lib/canvasStore';
+import { FlightBlock } from './FlightBlock';
+import { HotelBlock } from './HotelBlock';
+import { ActivityBlock } from './ActivityBlock';
 
 interface BlockProps {
   block: Block;
@@ -32,44 +34,26 @@ export function Block({ block }: BlockProps) {
   const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => setIsHovered(false);
 
-  return (
-    <Group
-      x={block.x}
-      y={block.y}
-      draggable
-      onClick={handleClick}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <Rect
-        width={block.width}
-        height={block.height}
-        fill={block.color}
-        stroke={isHovered ? '#000' : '#666'}
-        strokeWidth={isHovered ? 2 : 1}
-        cornerRadius={6}
-        shadowColor="rgba(0, 0, 0, 0.2)"
-        shadowBlur={isHovered ? 8 : 4}
-        shadowOffset={{ x: 0, y: 2 }}
-        shadowOpacity={1}
-      />
-      
-      <Text
-        x={8}
-        y={block.height / 2 - 8}
-        width={block.width - 16}
-        height={16}
-        text={block.title}
-        fontSize={14}
-        fontFamily="Inter, system-ui, sans-serif"
-        fill="#fff"
-        align="center"
-        verticalAlign="middle"
-        wrap="none"
-        ellipsis={true}
-      />
-    </Group>
-  );
+  // Common props for all block types
+  const commonProps = {
+    block,
+    isHovered,
+    onDragStart: handleDragStart,
+    onDragEnd: handleDragEnd,
+    onClick: handleClick,
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave
+  };
+
+  // Render type-specific component
+  switch (block.type) {
+    case 'flight':
+      return <FlightBlock {...commonProps} />;
+    case 'hotel':
+      return <HotelBlock {...commonProps} />;
+    case 'activity':
+      return <ActivityBlock {...commonProps} />;
+    default:
+      return null;
+  }
 }
