@@ -2,7 +2,10 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { Stage, Layer, Text, Line } from 'react-konva';
 import { useCanvasStore } from '../lib/canvasStore';
 import { FlightBlock } from './FlightBlock';
-import type { FlightBlock as FlightBlockType, FlightSegment } from '../lib/types/index';
+import { HotelBlock } from './HotelBlock';
+import { ActivityBlock } from './ActivityBlock';
+import { DraggableBlock } from './DraggableBlock';
+import type { FlightBlock as FlightBlockType, FlightSegment, HotelBlock as HotelBlockType, HotelEvent, ActivityBlock as ActivityBlockType } from '../lib/types/index';
 import { createDateRange, calculateHoursFromTripStart, calculateBlockPosition } from '../lib/utils/timeUtils';
 
 // Efficient grid that covers the entire viewport
@@ -182,6 +185,112 @@ export function Canvas({ width, height }: CanvasProps) {
     };
   }, [tripTimeline]);
 
+  // Create a sample hotel block with date-based positioning
+  const createHotelBlock = useCallback((_x: number, y: number): HotelBlockType => {
+    if (!tripTimeline) {
+      throw new Error('Trip timeline not initialized');
+    }
+
+    // Hotel stay: Dec 16-19 (3 days)
+    const checkinDate = new Date('2024-12-16T15:00:00');
+    const checkoutDate = new Date('2024-12-19T11:00:00');
+    
+    const startHour = calculateHoursFromTripStart(checkinDate, tripTimeline.startDate);
+    const endHour = calculateHoursFromTripStart(checkoutDate, tripTimeline.startDate);
+    const durationHours = endHour - startHour;
+
+    const events: HotelEvent[] = [
+      {
+        id: `event-${Date.now()}-1`,
+        type: 'checkin',
+        date: 'Dec 16',
+        hotelName: 'Grand Hotel',
+        startHour: startHour,
+        dateRange: createDateRange(checkinDate, checkinDate)
+      },
+      {
+        id: `event-${Date.now()}-2`,
+        type: 'checkout',
+        date: 'Dec 19',
+        hotelName: 'Grand Hotel',
+        startHour: endHour,
+        dateRange: createDateRange(checkoutDate, checkoutDate)
+      }
+    ];
+
+    // Calculate position based on time
+    const position = calculateBlockPosition(startHour, durationHours, tripTimeline.scale);
+
+    return {
+      id: `hotel-${Date.now()}`,
+      type: 'hotel',
+      x: position.x,
+      y: y,
+      width: position.width,
+      height: 100,
+      title: 'Grand Hotel',
+      totalDays: 3, // 3-day stay (for backward compatibility)
+      events,
+      contextBarHeight: 20,
+      eventHeight: 60,
+      hotelName: 'Grand Hotel',
+      location: 'San Francisco',
+      color: '#f3f4f6',
+      // New date-based properties
+      startHour,
+      durationHours,
+      dateRange: createDateRange(checkinDate, checkoutDate)
+    };
+  }, [tripTimeline]);
+
+  // Create a sample activity block with date-based positioning
+  const createActivityBlock = useCallback((_x: number, y: number): ActivityBlockType => {
+    if (!tripTimeline) {
+      throw new Error('Trip timeline not initialized');
+    }
+
+    const duration = Math.random() * 4 + 1; // 1-5 hours
+    const durationHours = Math.round(duration * 10) / 10;
+    
+    // Random activity time during the trip (Dec 17-18)
+    const activityDate = new Date('2024-12-17T10:00:00');
+    const randomHourOffset = Math.random() * 24; // Random hour within the day
+    activityDate.setHours(activityDate.getHours() + randomHourOffset);
+    
+    const startHour = calculateHoursFromTripStart(activityDate, tripTimeline.startDate);
+    
+    const activities = [
+      { name: 'Museum Visit', type: 'sightseeing', color: '#8b5cf6' },
+      { name: 'Restaurant Dinner', type: 'dining', color: '#f59e0b' },
+      { name: 'Shopping', type: 'shopping', color: '#10b981' },
+      { name: 'City Tour', type: 'sightseeing', color: '#3b82f6' },
+      { name: 'Beach Time', type: 'leisure', color: '#06b6d4' }
+    ];
+    
+    const activity = activities[Math.floor(Math.random() * activities.length)];
+
+    // Calculate position based on time
+    const position = calculateBlockPosition(startHour, durationHours, tripTimeline.scale);
+
+    return {
+      id: `activity-${Date.now()}`,
+      type: 'activity',
+      x: position.x,
+      y: y,
+      width: position.width,
+      height: 60,
+      title: activity.name,
+      duration: durationHours, // For backward compatibility
+      activityType: activity.type,
+      location: 'San Francisco',
+      color: activity.color,
+      // New date-based properties
+      startHour,
+      durationHours,
+      dateRange: createDateRange(activityDate, new Date(activityDate.getTime() + durationHours * 60 * 60 * 1000))
+    };
+  }, [tripTimeline]);
+
   // Handle stage drag (panning) - only when not dragging blocks
   const handleStageDragStart = useCallback(() => {
     // Only start panning if we're not dragging a block
@@ -262,11 +371,35 @@ export function Canvas({ width, height }: CanvasProps) {
       const snappedX = Math.round(x / 20) * 20;
       const snappedY = Math.round(y / 20) * 20;
 
-      // Create a flight block
-      const flightBlock = createFlightBlock(snappedX, snappedY);
-      addBlock(flightBlock);
+      // Cycle through regular blocks, flight blocks, hotel blocks, and activity blocks
+      const blockType = blocks.length % 4;
+      if (blockType === 0) {
+        // Create a regular block
+        const newBlock = {
+          id: `block-${Date.now()}`,
+          x: snappedX,
+          y: snappedY,
+          width: 120,
+          height: 60,
+          title: `Block ${blocks.length + 1}`,
+          color: `hsl(${(blocks.length * 137.5) % 360}, 70%, 80%)`,
+        };
+        addBlock(newBlock);
+      } else if (blockType === 1) {
+        // Create a flight block
+        const flightBlock = createFlightBlock(snappedX, snappedY);
+        addBlock(flightBlock);
+      } else if (blockType === 2) {
+        // Create a hotel block
+        const hotelBlock = createHotelBlock(snappedX, snappedY);
+        addBlock(hotelBlock);
+      } else {
+        // Create an activity block
+        const activityBlock = createActivityBlock(snappedX, snappedY);
+        addBlock(activityBlock);
+      }
     }
-  }, [stagePosition, stageScale, addBlock, createFlightBlock]);
+  }, [stagePosition, stageScale, addBlock, blocks.length, createFlightBlock, createHotelBlock, createActivityBlock]);
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
@@ -276,7 +409,7 @@ export function Canvas({ width, height }: CanvasProps) {
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200 z-10">
           <p className="text-sm text-gray-600">
             <strong>Canvas Controls:</strong><br />
-            • Double-click to add flight blocks<br />
+            • Double-click to add blocks (cycles through types)<br />
             • Drag to pan, scroll to zoom<br />
             • Drag blocks to move them
           </p>
@@ -306,7 +439,7 @@ export function Canvas({ width, height }: CanvasProps) {
           <Text
             x={20}
             y={20}
-            text="Double-click to add flight blocks • Drag to pan • Scroll to zoom"
+            text="Double-click to add blocks • Drag to pan • Scroll to zoom"
             fontSize={14}
             fill="#64748b"
             listening={false}
@@ -323,8 +456,34 @@ export function Canvas({ width, height }: CanvasProps) {
                   onDragEnd={() => handleBlockDragEnd({})}
                 />
               );
+            } else if ('type' in block && block.type === 'hotel') {
+              return (
+                <HotelBlock
+                  key={block.id}
+                  block={block as HotelBlockType}
+                  onDragStart={handleBlockDragStart}
+                  onDragEnd={() => handleBlockDragEnd({})}
+                />
+              );
+            } else if ('type' in block && block.type === 'activity') {
+              return (
+                <ActivityBlock
+                  key={block.id}
+                  block={block as ActivityBlockType}
+                  onDragStart={handleBlockDragStart}
+                  onDragEnd={() => handleBlockDragEnd({})}
+                />
+              );
+            } else {
+              return (
+                <DraggableBlock 
+                  key={block.id} 
+                  block={block}
+                  onDragStart={handleBlockDragStart}
+                  onDragEnd={() => handleBlockDragEnd({})}
+                />
+              );
             }
-            return null;
           })}
         </Layer>
       </Stage>

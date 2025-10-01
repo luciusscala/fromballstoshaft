@@ -302,11 +302,11 @@ function getIndividualLabelContent(block: CanvasBlock | FlightBlock | HotelBlock
         break;
       }
       default:
-        title = 'title' in block ? block.title : 'Block';
+        title = (block as { title?: string }).title || 'Block';
         subtitle = 'Block';
     }
   } else {
-    title = 'title' in block ? block.title : 'Block';
+    title = (block as { title?: string }).title || 'Block';
     subtitle = 'Block';
   }
   
