@@ -24,7 +24,7 @@ export function FlightBlock({
 }: FlightBlockProps) {
   const { pixelsPerHour } = useTimelineStore();
   const flightData = block.flightData;
-
+ 
   if (!flightData) {
     return null;
   }
@@ -43,6 +43,14 @@ export function FlightBlock({
     return `${h}h ${m}m`;
   };
 
+  // Calculate total flight width for centering and connecting rectangle
+  const firstSegment = flightData.segments[0];
+  const lastSegment = flightData.segments[flightData.segments.length - 1];
+  
+  const totalTimeSpan = (lastSegment.arrivalTime.getTime() - firstSegment.departureTime.getTime()) / (1000 * 60 * 60); // hours
+  const totalWidth = totalTimeSpan * pixelsPerHour;
+  const centerX = totalWidth / 2;
+
   return (
     <Group
       x={block.x}
@@ -54,8 +62,20 @@ export function FlightBlock({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-              {/* Render each segment as a separate rectangle */}
-              {flightData.segments.map((segment, index) => {
+      {/* Connecting rectangle to show all segments are one flight */}
+      <Rect
+        x={0}
+        y={0}
+        width={totalWidth}
+        height={6}
+        fill="#3b82f6"
+        cornerRadius={0}
+        opacity={1}
+        listening={false}
+      />
+
+      {/* Render each segment as a separate rectangle */}
+      {flightData.segments.map((segment, index) => {
                 // Calculate width based on duration and global scale
                 const segmentWidth = segment.duration * pixelsPerHour;
                 
@@ -110,16 +130,8 @@ export function FlightBlock({
       
       {/* Large floating label with color legend */}
       <Group>
-        {/* Calculate total flight width for centering */}
+        {/* Calculate label content */}
         {(() => {
-          // Calculate width based on actual time span from first departure to last arrival
-          const firstSegment = flightData.segments[0];
-          const lastSegment = flightData.segments[flightData.segments.length - 1];
-          
-          const totalTimeSpan = (lastSegment.arrivalTime.getTime() - firstSegment.departureTime.getTime()) / (1000 * 60 * 60); // hours
-          const totalWidth = totalTimeSpan * pixelsPerHour;
-          
-          const centerX = totalWidth / 2;
           
           // Define unique colors for each segment type
           const segmentColors = [

@@ -11,37 +11,6 @@ interface CanvasProps {
   height: number;
 }
 
-// Grid
-function Grid({ width, height }: { width: number; height: number }) {
-  const lines = [];
-  const spacing = 20;
-  
-  for (let i = 0; i <= width; i += spacing) {
-    lines.push(
-      <Line
-        key={`v-${i}`}
-        points={[i, 0, i, height]}
-        stroke="#e5e7eb"
-        strokeWidth={1}
-        listening={false}
-      />
-    );
-  }
-
-  for (let i = 0; i <= height; i += spacing) {
-    lines.push(
-      <Line
-        key={`h-${i}`}
-        points={[0, i, width, i]}
-        stroke="#e5e7eb"
-        strokeWidth={1}
-        listening={false}
-      />
-    );
-  }
-  
-  return <>{lines}</>;
-}
 
 export function Canvas({ width, height }: CanvasProps) {
   const { blocks, addBlock, isDragging } = useCanvasStore();
@@ -150,8 +119,6 @@ export function Canvas({ width, height }: CanvasProps) {
         className="cursor-grab active:cursor-grabbing"
       >
         <Layer>
-          <Grid width={width} height={height} />
-          
           {blocks.map((block) => (
             <Block key={block.id} block={block} />
           ))}

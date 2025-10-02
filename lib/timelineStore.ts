@@ -10,8 +10,8 @@ interface TimelineState {
 }
 
 export const useTimelineStore = create<TimelineState>((set) => ({
-  pixelsPerHour: 50, // 1 hour = 50px
-  pixelsPerMinute: 50 / 60, // 1 minute = 0.83px
+  pixelsPerHour: 7, // 1 hour = 7px
+  pixelsPerMinute: 7 / 60, // 1 minute = 0.12px
   
   setPixelsPerHour: (value) => set({ 
     pixelsPerHour: value, 
@@ -29,7 +29,7 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   })),
   
   resetZoom: () => set({ 
-    pixelsPerHour: 50,
-    pixelsPerMinute: 50 / 60
+    pixelsPerHour: 7,
+    pixelsPerMinute: 7 / 60
   }),
 }));
