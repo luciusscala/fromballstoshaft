@@ -2,6 +2,7 @@
 import { Group, Rect, Text, Line } from 'react-konva';
 import type { Block } from '../lib/types/block';
 import { useTimelineStore } from '../lib/timelineStore';
+import { FLIGHT_COLORS, LAYOUT, TEXT_STYLES, getSegmentColor, getSegmentType } from '../lib/constants/flightTheme';
 
 interface FlightBlockProps {
   block: Block;
@@ -28,14 +29,6 @@ export function FlightBlock({
   if (!flightData) {
     return null;
   }
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
-    });
-  };
 
   const formatDuration = (hours: number) => {
     const h = Math.floor(hours);
@@ -94,18 +87,18 @@ export function FlightBlock({
                   {/* Day background - only within flight timeline */}
                   <Rect
                     x={dayX}
-                    y={-16}
+                    y={LAYOUT.dayMarkerY}
                     width={dayWidth}
-                    height={12}
-                    fill="rgba(59, 130, 246, 0.1)"
-                    cornerRadius={2}
+                    height={LAYOUT.dayMarkerHeight}
+                    fill={FLIGHT_COLORS.dayMarkerBg}
+                    cornerRadius={LAYOUT.dayMarkerCornerRadius}
                     listening={false}
                   />
                   
                   {/* Day start vertical line */}
                   <Line
-                    points={[dayX, -16, dayX, -4]}
-                    stroke="#3b82f6"
+                    points={[dayX, LAYOUT.dayMarkerY, dayX, LAYOUT.dayMarkerLineY]}
+                    stroke={FLIGHT_COLORS.dayMarker}
                     strokeWidth={1}
                     listening={false}
                   />
@@ -113,15 +106,15 @@ export function FlightBlock({
                   {/* Day label - properly centered vertically */}
                   <Text
                     x={dayX + Math.max(2, dayWidth / 2 - 12)}
-                    y={-14}
+                    y={LAYOUT.dayMarkerTextY}
                     text={currentDay.toLocaleDateString('en-US', { 
                       month: 'short', 
                       day: 'numeric' 
                     })}
-                    fontSize={8}
-                    fontFamily="Inter, system-ui, sans-serif"
-                    fill="#3b82f6"
-                    fontStyle="bold"
+                    fontSize={TEXT_STYLES.sizes.dayMarker}
+                    fontFamily={TEXT_STYLES.fontFamily}
+                    fill={FLIGHT_COLORS.dayMarker}
+                    fontStyle={TEXT_STYLES.weights.bold}
                     verticalAlign="middle"
                     listening={false}
                   />
@@ -138,54 +131,33 @@ export function FlightBlock({
 
       {/* Render each segment as a separate rectangle */}
       {flightData.segments.map((segment, index) => {
-                // Calculate width based on duration and global scale
-                const segmentWidth = segment.duration * pixelsPerHour;
-                
-                // Calculate position based on actual time difference from block start
-                const timeDiffHours = (segment.departureTime.getTime() - block.startTime.getTime()) / (1000 * 60 * 60);
-                const segmentX = timeDiffHours * pixelsPerHour;
+        // Calculate width based on duration and global scale
+        const segmentWidth = segment.duration * pixelsPerHour;
+        
+        // Calculate position based on actual time difference from block start
+        const timeDiffHours = (segment.departureTime.getTime() - block.startTime.getTime()) / (1000 * 60 * 60);
+        const segmentX = timeDiffHours * pixelsPerHour;
 
-                // Define unique colors for each segment type
-                const segmentColors = [
-                  "#3b82f6", // Blue - Outbound
-                  "#f59e0b", // Orange - Layover
-                  "#10b981", // Green - Return
-                  "#8b5cf6", // Purple - Connection
-                  "#ef4444", // Red - Additional segments
-                  "#06b6d4", // Cyan - Extra segments
-                ];
-                
-                const isLayover = segment.isLayover || false;
-                let segmentColor;
-                
-                if (isLayover) {
-                  segmentColor = segmentColors[1]; // Orange
-                } else if (index === 0) {
-                  segmentColor = segmentColors[0]; // Blue - Outbound
-                } else if (index === flightData.segments.length - 1) {
-                  segmentColor = segmentColors[2]; // Green - Return
-                } else {
-                  segmentColor = segmentColors[3]; // Purple - Connection
-                }
+        // Get segment color using abstracted logic
+        const segmentColor = getSegmentColor(segment, index, flightData.segments.length);
         
         return (
           <Group key={segment.id}>
-                    {/* Segment rectangle - clean, no labels */}
-                    <Rect
-                      x={segmentX}
-                      y={0}
-                      width={segmentWidth}
-                      height={block.height}
-                      fill={segmentColor}
-                      stroke={isHovered ? '#1d4ed8' : '#1e40af'}
-                      strokeWidth={isHovered ? 2 : 1}
-                      cornerRadius={6}
-                      shadowColor="rgba(0, 0, 0, 0.2)"
-                      shadowBlur={isHovered ? 8 : 4}
-                      shadowOffset={{ x: 0, y: 2 }}
-                      shadowOpacity={1}
-                    />
-
+            {/* Segment rectangle - clean, no labels */}
+            <Rect
+              x={segmentX}
+              y={0}
+              width={segmentWidth}
+              height={block.height}
+              fill={segmentColor}
+              stroke={isHovered ? FLIGHT_COLORS.primaryHover : FLIGHT_COLORS.primaryStroke}
+              strokeWidth={isHovered ? 2 : 1}
+              cornerRadius={LAYOUT.segmentCornerRadius}
+              shadowColor={FLIGHT_COLORS.shadow}
+              shadowBlur={isHovered ? 8 : 4}
+              shadowOffset={{ x: 0, y: 2 }}
+              shadowOpacity={1}
+            />
           </Group>
         );
       })}
@@ -194,39 +166,30 @@ export function FlightBlock({
       <Group>
         {/* Calculate label content */}
         {(() => {
-          
-          // Define unique colors for each segment type
-          const segmentColors = [
-            "#3b82f6", // Blue - Outbound
-            "#f59e0b", // Orange - Layover
-            "#10b981", // Green - Return
-            "#8b5cf6", // Purple - Connection
-            "#ef4444", // Red - Additional segments
-            "#06b6d4", // Cyan - Extra segments
-          ];
-          
           // Create color legend for segments with specific labels and times
           const colorLegend = flightData.segments.map((segment, index) => {
             const segmentTime = formatDuration(segment.duration);
+            const segmentType = getSegmentType(segment, index, flightData.segments.length);
+            const segmentColor = getSegmentColor(segment, index, flightData.segments.length);
             
-            if (segment.isLayover) {
+            if (segmentType === 'layover') {
               return { 
-                color: segmentColors[1], 
+                color: segmentColor, 
                 label: `Layover (${segment.departureAirport}) - ${segmentTime}` 
               };
-            } else if (index === 0) {
+            } else if (segmentType === 'outbound') {
               return { 
-                color: segmentColors[0], 
+                color: segmentColor, 
                 label: `Outbound (${segment.departureAirport} → ${segment.arrivalAirport}) - ${segmentTime}` 
               };
-            } else if (index === flightData.segments.length - 1) {
+            } else if (segmentType === 'return') {
               return { 
-                color: segmentColors[2], 
+                color: segmentColor, 
                 label: `Return (${segment.departureAirport} → ${segment.arrivalAirport}) - ${segmentTime}` 
               };
             } else {
               return { 
-                color: segmentColors[3], 
+                color: segmentColor, 
                 label: `Connection (${segment.departureAirport} → ${segment.arrivalAirport}) - ${segmentTime}` 
               };
             }
@@ -237,10 +200,10 @@ export function FlightBlock({
             index === self.findIndex(t => t.label === item.label)
           );
           
-          // Calculate label dimensions
-          const labelWidth = 200;
-          const legendHeight = uniqueLegend.length * 18; // Increased spacing between legend items
-          const labelHeight = 50 + legendHeight; // More space between header and legend
+          // Calculate label dimensions using constants
+          const labelWidth = LAYOUT.labelWidth;
+          const legendHeight = uniqueLegend.length * LAYOUT.labelSpacing;
+          const labelHeight = LAYOUT.labelHeaderHeight + legendHeight;
           const labelX = centerX - (labelWidth / 2);
           const labelY = -labelHeight - 30; // Moved higher
           
@@ -253,11 +216,11 @@ export function FlightBlock({
                 y={labelY}
                 width={labelWidth}
                 height={labelHeight}
-                fill="rgba(255, 255, 255, 0.95)"
-                stroke="#3b82f6"
+                fill={FLIGHT_COLORS.labelBg}
+                stroke={FLIGHT_COLORS.labelBorder}
                 strokeWidth={2}
-                cornerRadius={8}
-                shadowColor="rgba(0, 0, 0, 0.15)"
+                cornerRadius={LAYOUT.labelCornerRadius}
+                shadowColor={FLIGHT_COLORS.labelShadow}
                 shadowBlur={8}
                 shadowOffset={{ x: 0, y: 4 }}
                 shadowOpacity={1}
@@ -266,64 +229,64 @@ export function FlightBlock({
               
               {/* Flight type badge */}
               <Rect
-                x={labelX + 8}
+                x={labelX + LAYOUT.labelPadding}
                 y={labelY + 6}
-                width={6}
-                height={6}
-                fill="#3b82f6"
-                cornerRadius={3}
+                width={LAYOUT.badgeSize}
+                height={LAYOUT.badgeSize}
+                fill={FLIGHT_COLORS.primary}
+                cornerRadius={LAYOUT.badgeCornerRadius}
                 listening={false}
               />
               
               <Text
-                x={labelX + 18}
+                x={labelX + LAYOUT.labelPadding + 10}
                 y={labelY + 4}
                 text="FLIGHT"
-                fontSize={9}
-                fontFamily="Inter, system-ui, sans-serif"
-                fill="#3b82f6"
-                fontStyle="bold"
+                fontSize={TEXT_STYLES.sizes.labelHeader}
+                fontFamily={TEXT_STYLES.fontFamily}
+                fill={FLIGHT_COLORS.primary}
+                fontStyle={TEXT_STYLES.weights.bold}
                 listening={false}
               />
               
-        {/* Flight route */}
-        <Text
-          x={labelX + 8}
-          y={labelY + 20}
-          text={`${flightData.departureAirport} → ${flightData.arrivalAirport}`}
-          fontSize={14}
-          fontFamily="Inter, system-ui, sans-serif"
-          fill="#374151"
-          fontStyle="bold"
-          width={labelWidth - 16}
-          align="center"
-          listening={false}
-        />
-        
-        {/* Color legend */}
-        {uniqueLegend.map((item, index) => (
-          <Group key={item.label}>
-            <Rect
-              x={labelX + 8}
-              y={labelY + 40 + (index * 18)}
-              width={8}
-              height={8}
-              fill={item.color}
-              cornerRadius={2}
-              listening={false}
-            />
-            <Text
-              x={labelX + 20}
-              y={labelY + 42 + (index * 18)}
-              text={item.label}
-              fontSize={9}
-              fontFamily="Inter, system-ui, sans-serif"
-              fill="#6b7280"
-              fontStyle="bold"
-              listening={false}
-            />
-          </Group>
-        ))}
+              {/* Flight route */}
+              <Text
+                x={labelX + LAYOUT.labelPadding}
+                y={labelY + 20}
+                text={`${flightData.departureAirport} → ${flightData.arrivalAirport}`}
+                fontSize={TEXT_STYLES.sizes.labelRoute}
+                fontFamily={TEXT_STYLES.fontFamily}
+                fill={FLIGHT_COLORS.labelText}
+                fontStyle={TEXT_STYLES.weights.bold}
+                width={labelWidth - (LAYOUT.labelPadding * 2)}
+                align="center"
+                listening={false}
+              />
+              
+              {/* Color legend */}
+              {uniqueLegend.map((item, index) => (
+                <Group key={item.label}>
+                  <Rect
+                    x={labelX + LAYOUT.labelPadding}
+                    y={labelY + 40 + (index * LAYOUT.legendItemSpacing)}
+                    width={LAYOUT.legendItemHeight}
+                    height={LAYOUT.legendItemHeight}
+                    fill={item.color}
+                    cornerRadius={2}
+                    listening={false}
+                  />
+                  <Text
+                    x={labelX + LAYOUT.labelPadding + 12}
+                    y={labelY + 42 + (index * LAYOUT.legendItemSpacing)}
+                    text={item.label}
+                    fontSize={TEXT_STYLES.sizes.legend}
+                    fontFamily={TEXT_STYLES.fontFamily}
+                    fill={FLIGHT_COLORS.legendText}
+                    fontStyle={TEXT_STYLES.weights.bold}
+                    listening={false}
+                  />
+                </Group>
+              ))}
             </>
           );
         })()}
