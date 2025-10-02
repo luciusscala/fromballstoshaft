@@ -94,29 +94,4 @@ export class BlockFactory {
   static createActivity(x: number, y: number): Block {
     return createActivityBlock(x, y);
   }
-
-  /**
-   * Create a block by type (for backward compatibility)
-   */
-  static createBlock(type: 'flight' | 'hotel' | 'activity', x: number, y: number): Block {
-    switch (type) {
-      case 'flight':
-        return createFlightBlock(x, y); // Uses legacy creator for now
-      case 'hotel':
-        return createHotelBlock(x, y);
-      case 'activity':
-        return createActivityBlock(x, y);
-      default:
-        throw new Error(`Unknown block type: ${type}`);
-    }
-  }
-
-  /**
-   * Create a random block (for testing)
-   */
-  static createRandomBlock(x: number, y: number): Block {
-    const types = ['flight', 'hotel', 'activity'] as const;
-    const randomType = types[Math.floor(Math.random() * types.length)];
-    return this.createBlock(randomType, x, y);
-  }
 }
