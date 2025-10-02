@@ -71,30 +71,41 @@ export function Canvas({ width, height }: CanvasProps) {
     }
   }, [blocks.length, addBlock, stagePosition, stageScale]);
 
-  // Handle wheel zoom
+  // Handle wheel zoom with dampening
   const handleWheel = useCallback((e: { evt: { preventDefault(): void; deltaY: number } }) => {
     e.evt.preventDefault();
-    const scaleBy = 1.1;
     const stage = stageRef.current;
     if (!stage) return;
     
+    // Figma-like zoom sensitivity (much more gradual)
+    const scaleBy = 1.03;
     const oldScale = stage.scaleX();
     const pointer = stage.getPointerPosition();
     
+    // Get the current stage position from the stage itself (more reliable)
+    const currentX = stage.x();
+    const currentY = stage.y();
+    
+    // Calculate the point in the stage content that the mouse is pointing to
     const mousePointTo = {
-      x: (pointer.x - stagePosition.x) / oldScale,
-      y: (pointer.y - stagePosition.y) / oldScale,
+      x: (pointer.x - currentX) / oldScale,
+      y: (pointer.y - currentY) / oldScale,
     };
     
-    const newScale = e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
-    const clampedScale = Math.max(0.1, Math.min(3, newScale));
+    // Calculate new scale
+    const zoomFactor = e.evt.deltaY > 0 ? 1 / scaleBy : scaleBy;
+    const newScale = oldScale * zoomFactor;
+    const clampedScale = Math.max(0.1, Math.min(10, newScale)); // Figma-like zoom range
     
-    setStageScale(clampedScale);
-    setStagePosition({
+    // Calculate new position to keep the mouse point in the same place
+    const newPosition = {
       x: pointer.x - mousePointTo.x * clampedScale,
       y: pointer.y - mousePointTo.y * clampedScale,
-    });
-  }, [stagePosition]);
+    };
+    
+    setStageScale(clampedScale);
+    setStagePosition(newPosition);
+  }, []);
 
   return (
     <div className="h-screen bg-gray-50">

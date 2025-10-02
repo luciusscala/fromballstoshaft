@@ -8,13 +8,39 @@ export interface Block {
   title: string;
   type: 'flight' | 'hotel' | 'activity';
   color: string;
+  // Flight-specific data (only present when type is 'flight')
+  flightData?: FlightData;
 }
 
-// Simple trip data
-export interface Trip {
+export interface FlightData {
+  segments: FlightSegment[];
+  totalDuration: number; // in hours
+  departureAirport: string;
+  arrivalAirport: string;
+  airline: string;
+  flightNumber: string;
+  price?: number;
+  bookingReference?: string;
+}
+
+export interface FlightSegment {
   id: string;
-  name: string;
-  startDate: Date;
-  endDate: Date;
-  blocks: Block[];
+  departure: {
+    airport: string;
+    terminal?: string;
+    gate?: string;
+    time: Date;
+  };
+  arrival: {
+    airport: string;
+    terminal?: string;
+    gate?: string;
+    time: Date;
+  };
+  airline: string;
+  flightNumber: string;
+  aircraft?: string;
+  duration: number; // in hours
+  layover?: number; // in hours, only for connecting flights
+  class: 'economy' | 'premium' | 'business' | 'first';
 }
