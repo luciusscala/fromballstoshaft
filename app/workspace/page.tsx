@@ -25,12 +25,6 @@ function WorkspaceContent() {
 
   return (
     <div className="h-screen bg-gray-50">
-      {/* Simple header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <h1 className="text-2xl font-bold text-gray-900">Trip Planner</h1>
-        <p className="text-gray-600">Double-click to add blocks • Drag to move • Scroll to zoom</p>
-      </div>
-
       {/* Full canvas */}
       <div className="h-[calc(100vh-80px)]">
         {dimensions.width > 0 && (
