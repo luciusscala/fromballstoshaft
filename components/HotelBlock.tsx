@@ -1,6 +1,7 @@
 // Hotel block component
 import { Group, Rect, Text } from 'react-konva';
 import type { Block } from '../lib/types/block';
+import { useTimelineStore } from '../lib/timelineStore';
 
 interface HotelBlockProps {
   block: Block;
@@ -21,6 +22,10 @@ export function HotelBlock({
   onMouseEnter, 
   onMouseLeave 
 }: HotelBlockProps) {
+  const { pixelsPerHour } = useTimelineStore();
+  
+  // Calculate width based on duration and global scale
+  const blockWidth = block.duration * pixelsPerHour;
   return (
     <Group
       x={block.x}
@@ -34,7 +39,7 @@ export function HotelBlock({
     >
       {/* Main hotel block */}
       <Rect
-        width={block.width}
+        width={blockWidth}
         height={block.height}
         fill="#10b981"
         stroke={isHovered ? '#059669' : '#047857'}
@@ -50,7 +55,7 @@ export function HotelBlock({
       <Rect
         x={8}
         y={8}
-        width={block.width - 16}
+        width={blockWidth - 16}
         height={12}
         fill="#047857"
         cornerRadius={2}
@@ -59,7 +64,7 @@ export function HotelBlock({
       <Rect
         x={8}
         y={24}
-        width={block.width - 16}
+        width={blockWidth - 16}
         height={12}
         fill="#047857"
         cornerRadius={2}
@@ -69,7 +74,7 @@ export function HotelBlock({
       <Text
         x={8}
         y={block.height / 2 - 8}
-        width={block.width - 16}
+        width={blockWidth - 16}
         height={16}
         text="Hotel"
         fontSize={14}

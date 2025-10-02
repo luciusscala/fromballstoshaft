@@ -1,6 +1,7 @@
 // Activity block component
 import { Group, Rect, Text } from 'react-konva';
 import type { Block } from '../lib/types/block';
+import { useTimelineStore } from '../lib/timelineStore';
 
 interface ActivityBlockProps {
   block: Block;
@@ -21,6 +22,10 @@ export function ActivityBlock({
   onMouseEnter, 
   onMouseLeave 
 }: ActivityBlockProps) {
+  const { pixelsPerHour } = useTimelineStore();
+  
+  // Calculate width based on duration and global scale
+  const blockWidth = block.duration * pixelsPerHour;
   return (
     <Group
       x={block.x}
@@ -34,7 +39,7 @@ export function ActivityBlock({
     >
       {/* Main activity block */}
       <Rect
-        width={block.width}
+        width={blockWidth}
         height={block.height}
         fill="#f59e0b"
         stroke={isHovered ? '#d97706' : '#b45309'}

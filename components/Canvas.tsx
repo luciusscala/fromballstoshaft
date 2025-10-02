@@ -2,6 +2,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
 import { useCanvasStore } from '../lib/canvasStore';
+import { useTimelineStore } from '../lib/timelineStore';
 import { Block } from './Block';
 import { createFlightBlock, createHotelBlock, createActivityBlock } from '../lib/blockCreators';
 
@@ -26,7 +27,7 @@ function Grid({ width, height }: { width: number; height: number }) {
       />
     );
   }
-  
+
   for (let i = 0; i <= height; i += spacing) {
     lines.push(
       <Line
@@ -44,6 +45,7 @@ function Grid({ width, height }: { width: number; height: number }) {
 
 export function Canvas({ width, height }: CanvasProps) {
   const { blocks, addBlock, isDragging } = useCanvasStore();
+  const { pixelsPerHour, zoomIn, zoomOut, resetZoom } = useTimelineStore();
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const [stageScale, setStageScale] = useState(1);
   const stageRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -108,7 +110,32 @@ export function Canvas({ width, height }: CanvasProps) {
   }, []);
 
   return (
-    <div className="h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 relative">
+      {/* Zoom Controls */}
+      <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-2 flex gap-2">
+        <button
+          onClick={zoomOut}
+          className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium"
+        >
+          -
+        </button>
+        <span className="px-2 py-1 text-sm text-gray-600 min-w-[60px] text-center">
+          {Math.round(pixelsPerHour)}px/h
+        </span>
+        <button
+          onClick={zoomIn}
+          className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium"
+        >
+          +
+        </button>
+        <button
+          onClick={resetZoom}
+          className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-sm font-medium"
+        >
+          Reset
+        </button>
+      </div>
+
       <Stage
         ref={stageRef}
         width={width}
