@@ -200,12 +200,12 @@ export function FlightBlock({
             index === self.findIndex(t => t.label === item.label)
           );
           
-          // Calculate label dimensions using constants
-          const labelWidth = LAYOUT.labelWidth;
-          const legendHeight = uniqueLegend.length * LAYOUT.labelSpacing;
-          const labelHeight = LAYOUT.labelHeaderHeight + legendHeight;
+          // Calculate label dimensions using constants - made bigger
+          const labelWidth = LAYOUT.labelWidth + 100; // Increased width
+          const legendHeight = uniqueLegend.length * (LAYOUT.labelSpacing + 4); // Increased spacing
+          const labelHeight = LAYOUT.labelHeaderHeight + 20 + legendHeight; // Increased height
           const labelX = centerX - (labelWidth / 2);
-          const labelY = -labelHeight - 30; // Moved higher
+          const labelY = -labelHeight - 40; // Moved higher
           
           return (
             <>
@@ -230,19 +230,19 @@ export function FlightBlock({
               {/* Flight type badge */}
               <Rect
                 x={labelX + LAYOUT.labelPadding}
-                y={labelY + 6}
-                width={LAYOUT.badgeSize}
-                height={LAYOUT.badgeSize}
+                y={labelY + 8}
+                width={LAYOUT.badgeSize + 2}
+                height={LAYOUT.badgeSize + 2}
                 fill={FLIGHT_COLORS.primary}
                 cornerRadius={LAYOUT.badgeCornerRadius}
                 listening={false}
               />
               
               <Text
-                x={labelX + LAYOUT.labelPadding + 10}
-                y={labelY + 4}
+                x={labelX + LAYOUT.labelPadding + 12}
+                y={labelY + 6}
                 text="FLIGHT"
-                fontSize={TEXT_STYLES.sizes.labelHeader}
+                fontSize={TEXT_STYLES.sizes.labelHeader + 2}
                 fontFamily={TEXT_STYLES.fontFamily}
                 fill={FLIGHT_COLORS.primary}
                 fontStyle={TEXT_STYLES.weights.bold}
@@ -252,9 +252,9 @@ export function FlightBlock({
               {/* Flight route */}
               <Text
                 x={labelX + LAYOUT.labelPadding}
-                y={labelY + 20}
+                y={labelY + 28}
                 text={`${flightData.departureAirport} → ${flightData.arrivalAirport}`}
-                fontSize={TEXT_STYLES.sizes.labelRoute}
+                fontSize={TEXT_STYLES.sizes.labelRoute + 4}
                 fontFamily={TEXT_STYLES.fontFamily}
                 fill={FLIGHT_COLORS.labelText}
                 fontStyle={TEXT_STYLES.weights.bold}
@@ -268,18 +268,18 @@ export function FlightBlock({
                 <Group key={item.label}>
                   <Rect
                     x={labelX + LAYOUT.labelPadding}
-                    y={labelY + 40 + (index * LAYOUT.legendItemSpacing)}
-                    width={LAYOUT.legendItemHeight}
-                    height={LAYOUT.legendItemHeight}
+                    y={labelY + 50 + (index * (LAYOUT.legendItemSpacing + 4))}
+                    width={LAYOUT.legendItemHeight + 2}
+                    height={LAYOUT.legendItemHeight + 2}
                     fill={item.color}
                     cornerRadius={2}
                     listening={false}
                   />
                   <Text
-                    x={labelX + LAYOUT.labelPadding + 12}
-                    y={labelY + 42 + (index * LAYOUT.legendItemSpacing)}
+                    x={labelX + LAYOUT.labelPadding + 14}
+                    y={labelY + 52 + (index * (LAYOUT.legendItemSpacing + 4))}
                     text={item.label}
-                    fontSize={TEXT_STYLES.sizes.legend}
+                    fontSize={TEXT_STYLES.sizes.legend + 2}
                     fontFamily={TEXT_STYLES.fontFamily}
                     fill={FLIGHT_COLORS.legendText}
                     fontStyle={TEXT_STYLES.weights.bold}
