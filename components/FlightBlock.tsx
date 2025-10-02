@@ -74,6 +74,79 @@ export function FlightBlock({
         listening={false}
       />
 
+      {/* Day markers spanning the entire flight timeline */}
+      {(() => {
+        const startDate = new Date(firstSegment.departureTime);
+        const endDate = new Date(lastSegment.arrivalTime);
+        
+        // Get the start and end of the day range
+        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        
+        const dayMarkers = [];
+        const currentDay = new Date(startDay);
+        
+        while (currentDay <= endDay) {
+          const dayStart = new Date(currentDay);
+          const dayEnd = new Date(currentDay.getTime() + 24 * 60 * 60 * 1000);
+          
+          // Calculate position and width for this day, constrained to flight timeline
+          const dayStartHours = (dayStart.getTime() - block.startTime.getTime()) / (1000 * 60 * 60);
+          const dayEndHours = (dayEnd.getTime() - block.startTime.getTime()) / (1000 * 60 * 60);
+          
+          // Only show if the day overlaps with the flight timeline
+          if (dayEndHours > 0 && dayStartHours < totalTimeSpan) {
+            const dayX = Math.max(0, dayStartHours * pixelsPerHour);
+            const dayEndX = Math.min(totalWidth, dayEndHours * pixelsPerHour);
+            const dayWidth = Math.max(0, dayEndX - dayX);
+            
+            if (dayWidth > 0) {
+              dayMarkers.push(
+                <Group key={currentDay.toISOString().split('T')[0]}>
+                  {/* Day background - only within flight timeline */}
+                  <Rect
+                    x={dayX}
+                    y={-12}
+                    width={dayWidth}
+                    height={8}
+                    fill="rgba(59, 130, 246, 0.1)"
+                    cornerRadius={2}
+                    listening={false}
+                  />
+                  
+                  {/* Day start vertical line */}
+                  <Line
+                    points={[dayX, -12, dayX, -4]}
+                    stroke="#3b82f6"
+                    strokeWidth={1}
+                    listening={false}
+                  />
+                  
+                  {/* Day label - centered in available space */}
+                  <Text
+                    x={dayX + Math.max(2, dayWidth / 2 - 12)}
+                    y={-10}
+                    text={currentDay.toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}
+                    fontSize={8}
+                    fontFamily="Inter, system-ui, sans-serif"
+                    fill="#3b82f6"
+                    fontStyle="bold"
+                    listening={false}
+                  />
+                </Group>
+              );
+            }
+          }
+          
+          currentDay.setDate(currentDay.getDate() + 1);
+        }
+        
+        return dayMarkers;
+      })()}
+
       {/* Render each segment as a separate rectangle */}
       {flightData.segments.map((segment, index) => {
                 // Calculate width based on duration and global scale
