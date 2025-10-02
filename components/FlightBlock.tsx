@@ -62,17 +62,6 @@ export function FlightBlock({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {/* Connecting rectangle to show all segments are one flight */}
-      <Rect
-        x={0}
-        y={0}
-        width={totalWidth}
-        height={6}
-        fill="#3b82f6"
-        cornerRadius={0}
-        opacity={1}
-        listening={false}
-      />
 
       {/* Day markers spanning the entire flight timeline */}
       {(() => {
@@ -90,15 +79,14 @@ export function FlightBlock({
           const dayStart = new Date(currentDay);
           const dayEnd = new Date(currentDay.getTime() + 24 * 60 * 60 * 1000);
           
-          // Calculate position and width for this day, constrained to flight timeline
+          // Calculate position and width for this day - show full day width
           const dayStartHours = (dayStart.getTime() - block.startTime.getTime()) / (1000 * 60 * 60);
           const dayEndHours = (dayEnd.getTime() - block.startTime.getTime()) / (1000 * 60 * 60);
           
           // Only show if the day overlaps with the flight timeline
           if (dayEndHours > 0 && dayStartHours < totalTimeSpan) {
-            const dayX = Math.max(0, dayStartHours * pixelsPerHour);
-            const dayEndX = Math.min(totalWidth, dayEndHours * pixelsPerHour);
-            const dayWidth = Math.max(0, dayEndX - dayX);
+            const dayX = dayStartHours * pixelsPerHour;
+            const dayWidth = 24 * pixelsPerHour; // Full 24-hour day width
             
             if (dayWidth > 0) {
               dayMarkers.push(
@@ -106,9 +94,9 @@ export function FlightBlock({
                   {/* Day background - only within flight timeline */}
                   <Rect
                     x={dayX}
-                    y={-12}
+                    y={-16}
                     width={dayWidth}
-                    height={8}
+                    height={12}
                     fill="rgba(59, 130, 246, 0.1)"
                     cornerRadius={2}
                     listening={false}
@@ -116,16 +104,16 @@ export function FlightBlock({
                   
                   {/* Day start vertical line */}
                   <Line
-                    points={[dayX, -12, dayX, -4]}
+                    points={[dayX, -16, dayX, -4]}
                     stroke="#3b82f6"
                     strokeWidth={1}
                     listening={false}
                   />
                   
-                  {/* Day label - centered in available space */}
+                  {/* Day label - properly centered vertically */}
                   <Text
                     x={dayX + Math.max(2, dayWidth / 2 - 12)}
-                    y={-10}
+                    y={-14}
                     text={currentDay.toLocaleDateString('en-US', { 
                       month: 'short', 
                       day: 'numeric' 
@@ -134,6 +122,7 @@ export function FlightBlock({
                     fontFamily="Inter, system-ui, sans-serif"
                     fill="#3b82f6"
                     fontStyle="bold"
+                    verticalAlign="middle"
                     listening={false}
                   />
                 </Group>
@@ -253,18 +242,10 @@ export function FlightBlock({
           const legendHeight = uniqueLegend.length * 18; // Increased spacing between legend items
           const labelHeight = 50 + legendHeight; // More space between header and legend
           const labelX = centerX - (labelWidth / 2);
-          const labelY = -labelHeight - 20;
+          const labelY = -labelHeight - 30; // Moved higher
           
           return (
             <>
-              {/* Connection line to center of block */}
-              <Line
-                points={[centerX, -15, centerX, 0]}
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dash={[3, 3]}
-                listening={false}
-              />
               
               {/* Label background */}
               <Rect
