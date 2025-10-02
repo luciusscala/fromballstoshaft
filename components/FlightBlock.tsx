@@ -131,27 +131,29 @@ export function FlightBlock({
             "#06b6d4", // Cyan - Extra segments
           ];
           
-          // Create color legend for segments with specific labels
+          // Create color legend for segments with specific labels and times
           const colorLegend = flightData.segments.map((segment, index) => {
+            const segmentTime = formatDuration(segment.duration);
+            
             if (segment.isLayover) {
               return { 
                 color: segmentColors[1], 
-                label: `Layover (${segment.departureAirport})` 
+                label: `Layover (${segment.departureAirport}) - ${segmentTime}` 
               };
             } else if (index === 0) {
               return { 
                 color: segmentColors[0], 
-                label: `Outbound (${segment.departureAirport} → ${segment.arrivalAirport})` 
+                label: `Outbound (${segment.departureAirport} → ${segment.arrivalAirport}) - ${segmentTime}` 
               };
             } else if (index === flightData.segments.length - 1) {
               return { 
                 color: segmentColors[2], 
-                label: `Return (${segment.departureAirport} → ${segment.arrivalAirport})` 
+                label: `Return (${segment.departureAirport} → ${segment.arrivalAirport}) - ${segmentTime}` 
               };
             } else {
               return { 
                 color: segmentColors[3], 
-                label: `Connection (${segment.departureAirport} → ${segment.arrivalAirport})` 
+                label: `Connection (${segment.departureAirport} → ${segment.arrivalAirport}) - ${segmentTime}` 
               };
             }
           });
@@ -163,8 +165,8 @@ export function FlightBlock({
           
           // Calculate label dimensions
           const labelWidth = 200;
-          const legendHeight = uniqueLegend.length * 16;
-          const labelHeight = 60 + legendHeight;
+          const legendHeight = uniqueLegend.length * 18; // Increased spacing between legend items
+          const labelHeight = 50 + legendHeight; // More space between header and legend
           const labelX = centerX - (labelWidth / 2);
           const labelY = -labelHeight - 20;
           
@@ -218,57 +220,44 @@ export function FlightBlock({
                 listening={false}
               />
               
-              {/* Flight route */}
-              <Text
-                x={labelX + 8}
-                y={labelY + 20}
-                text={`${flightData.departureAirport} → ${flightData.arrivalAirport}`}
-                fontSize={14}
-                fontFamily="Inter, system-ui, sans-serif"
-                fill="#374151"
-                fontStyle="bold"
-                width={labelWidth - 16}
-                align="center"
-                listening={false}
-              />
-              
-              {/* Duration */}
-              <Text
-                x={labelX + 8}
-                y={labelY + 38}
-                text={formatDuration(block.duration)}
-                fontSize={11}
-                fontFamily="Inter, system-ui, sans-serif"
-                fill="#6b7280"
-                width={labelWidth - 16}
-                align="center"
-                listening={false}
-              />
-              
-              {/* Color legend */}
-              {uniqueLegend.map((item, index) => (
-                <Group key={item.label}>
-                  <Rect
-                    x={labelX + 8}
-                    y={labelY + 52 + (index * 16)}
-                    width={8}
-                    height={8}
-                    fill={item.color}
-                    cornerRadius={2}
-                    listening={false}
-                  />
-                  <Text
-                    x={labelX + 20}
-                    y={labelY + 54 + (index * 16)}
-                    text={item.label}
-                    fontSize={9}
-                    fontFamily="Inter, system-ui, sans-serif"
-                    fill="#6b7280"
-                    fontStyle="bold"
-                    listening={false}
-                  />
-                </Group>
-              ))}
+        {/* Flight route */}
+        <Text
+          x={labelX + 8}
+          y={labelY + 20}
+          text={`${flightData.departureAirport} → ${flightData.arrivalAirport}`}
+          fontSize={14}
+          fontFamily="Inter, system-ui, sans-serif"
+          fill="#374151"
+          fontStyle="bold"
+          width={labelWidth - 16}
+          align="center"
+          listening={false}
+        />
+        
+        {/* Color legend */}
+        {uniqueLegend.map((item, index) => (
+          <Group key={item.label}>
+            <Rect
+              x={labelX + 8}
+              y={labelY + 40 + (index * 18)}
+              width={8}
+              height={8}
+              fill={item.color}
+              cornerRadius={2}
+              listening={false}
+            />
+            <Text
+              x={labelX + 20}
+              y={labelY + 42 + (index * 18)}
+              text={item.label}
+              fontSize={9}
+              fontFamily="Inter, system-ui, sans-serif"
+              fill="#6b7280"
+              fontStyle="bold"
+              listening={false}
+            />
+          </Group>
+        ))}
             </>
           );
         })()}
