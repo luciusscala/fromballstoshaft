@@ -1,7 +1,9 @@
-// Control panel for creating and managing flight blocks
+// Control panel for creating and managing flight and hotel blocks
 import { useState } from 'react';
 import { FlightBuilder } from '../lib/builders/FlightBuilder';
+import { HotelBuilder } from '../lib/builders/HotelBuilder';
 import { getAllFlightPresets, getFlightPreset } from '../lib/presets/flightPresets';
+import { getAllHotelPresets, getHotelPreset } from '../lib/presets/hotelPresets';
 import type { Block } from '../lib/types/block';
 
 interface ControlPanelProps {
@@ -13,10 +15,11 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
   const [flightLink, setFlightLink] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const presets = getAllFlightPresets();
+  const flightPresets = getAllFlightPresets();
+  const hotelPresets = getAllHotelPresets();
 
 
-  const handleLoadPreset = (presetId: string) => {
+  const handleLoadFlightPreset = (presetId: string) => {
     const preset = getFlightPreset(presetId);
     if (!preset) return;
 
@@ -24,6 +27,17 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
     const y = Math.random() * 300 + 100;
 
     const block = FlightBuilder.createFromConfig(preset.config, x, y);
+    onCreateBlock(block);
+  };
+
+  const handleLoadHotelPreset = (presetId: string) => {
+    const preset = getHotelPreset(presetId);
+    if (!preset) return;
+
+    const x = Math.random() * 400 + 100; // Random position
+    const y = Math.random() * 300 + 100;
+
+    const block = HotelBuilder.createFromConfig(preset.config, x, y);
     onCreateBlock(block);
   };
 
@@ -73,7 +87,7 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
 
   return (
     <div className={`bg-white rounded-lg shadow-lg p-6 max-w-md ${className}`}>
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Add Flight Block</h2>
+      <h2 className="text-xl font-bold text-gray-800 mb-4">Add Blocks</h2>
 
       {/* Flight Link Parser */}
       <div className="mb-6">
@@ -106,15 +120,32 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
         </p>
       </div>
 
-      {/* Test Data Presets */}
+      {/* Flight Test Data Presets */}
       <div className="border-t pt-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Load Test Data</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Flight Test Data</h3>
         <div className="space-y-2">
-          {presets.map((preset) => (
+          {flightPresets.map((preset) => (
             <button
               key={preset.id}
-              onClick={() => handleLoadPreset(preset.id)}
-              className="w-full text-left bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm py-2 px-3 rounded-md transition-colors"
+              onClick={() => handleLoadFlightPreset(preset.id)}
+              className="w-full text-left bg-blue-50 hover:bg-blue-100 text-gray-700 text-sm py-2 px-3 rounded-md transition-colors"
+            >
+              <div className="font-medium">{preset.name}</div>
+              <div className="text-xs text-gray-500">{preset.description}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Hotel Test Data Presets */}
+      <div className="border-t pt-4">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Hotel Test Data</h3>
+        <div className="space-y-2">
+          {hotelPresets.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => handleLoadHotelPreset(preset.id)}
+              className="w-full text-left bg-green-50 hover:bg-green-100 text-gray-700 text-sm py-2 px-3 rounded-md transition-colors"
             >
               <div className="font-medium">{preset.name}</div>
               <div className="text-xs text-gray-500">{preset.description}</div>

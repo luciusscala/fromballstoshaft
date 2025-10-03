@@ -11,8 +11,9 @@ interface BlockProps {
 }
 
 export function Block({ block }: BlockProps) {
-  const { selectBlock, updateBlock, setDragging } = useCanvasStore();
+  const { selectBlock, updateBlock, setDragging, selectedBlockId } = useCanvasStore();
   const [isHovered, setIsHovered] = useState(false);
+  const isSelected = selectedBlockId === block.id;
 
   const handleClick = (e: { cancelBubble: boolean }) => {
     e.cancelBubble = true;
@@ -38,6 +39,7 @@ export function Block({ block }: BlockProps) {
   const commonProps = {
     block,
     isHovered,
+    isSelected,
     onDragStart: handleDragStart,
     onDragEnd: handleDragEnd,
     onClick: handleClick,
