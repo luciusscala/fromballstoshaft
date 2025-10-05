@@ -1,9 +1,11 @@
-// Control panel for creating and managing flight and hotel blocks
+// Control panel for creating and managing flight, hotel, and activity blocks
 import { useState } from 'react';
 import { FlightBuilder } from '../lib/builders/FlightBuilder';
 import { HotelBuilder } from '../lib/builders/HotelBuilder';
+import { ActivityBuilder } from '../lib/builders/ActivityBuilder';
 import { getAllFlightPresets, getFlightPreset } from '../lib/presets/flightPresets';
 import { getAllHotelPresets, getHotelPreset } from '../lib/presets/hotelPresets';
+import { getAllActivityPresets, getActivityPreset } from '../lib/presets/activityPresets';
 import type { Block } from '../lib/types/block';
 
 interface ControlPanelProps {
@@ -17,6 +19,7 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
 
   const flightPresets = getAllFlightPresets();
   const hotelPresets = getAllHotelPresets();
+  const activityPresets = getAllActivityPresets();
 
 
   const handleLoadFlightPreset = (presetId: string) => {
@@ -38,6 +41,17 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
     const y = Math.random() * 300 + 100;
 
     const block = HotelBuilder.createFromConfig(preset.config, x, y);
+    onCreateBlock(block);
+  };
+
+  const handleLoadActivityPreset = (presetId: string) => {
+    const preset = getActivityPreset(presetId);
+    if (!preset) return;
+
+    const x = Math.random() * 400 + 100; // Random position
+    const y = Math.random() * 300 + 100;
+
+    const block = ActivityBuilder.createFromConfig(preset.config, x, y);
     onCreateBlock(block);
   };
 
@@ -146,6 +160,23 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
               key={preset.id}
               onClick={() => handleLoadHotelPreset(preset.id)}
               className="w-full text-left bg-green-50 hover:bg-green-100 text-gray-700 text-sm py-2 px-3 rounded-md transition-colors"
+            >
+              <div className="font-medium">{preset.name}</div>
+              <div className="text-xs text-gray-500">{preset.description}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Activity Test Data Presets */}
+      <div className="border-t pt-4">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Activity Test Data</h3>
+        <div className="space-y-2">
+          {activityPresets.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => handleLoadActivityPreset(preset.id)}
+              className="w-full text-left bg-purple-50 hover:bg-purple-100 text-gray-700 text-sm py-2 px-3 rounded-md transition-colors"
             >
               <div className="font-medium">{preset.name}</div>
               <div className="text-xs text-gray-500">{preset.description}</div>
