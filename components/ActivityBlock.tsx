@@ -71,7 +71,7 @@ export function ActivityBlock({
         {(() => {
           // Calculate label dimensions
           const labelWidth = LAYOUT.labelWidth + 100;
-          const labelHeight = LAYOUT.labelHeaderHeight + 20;
+          const labelHeight = LAYOUT.labelHeaderHeight + 60;
           const labelX = centerX - (labelWidth / 2);
           const labelY = -labelHeight - 40;
           
@@ -127,13 +127,14 @@ export function ActivityBlock({
                 fontStyle={TEXT_STYLES.weights.bold}
                 width={labelWidth - (LAYOUT.labelPadding * 2)}
                 align="center"
+                wrap="word"
                 listening={false}
               />
               
               {/* Time range */}
               <Text
                 x={labelX + LAYOUT.labelPadding}
-                y={labelY + 50}
+                y={labelY + 80}
                 text={`${formatTime(block.startTime)} - ${formatTime(block.endTime)}`}
                 fontSize={TEXT_STYLES.sizes.legend + 2}
                 fontFamily={TEXT_STYLES.fontFamily}
