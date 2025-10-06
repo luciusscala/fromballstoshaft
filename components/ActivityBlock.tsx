@@ -10,6 +10,7 @@ interface ActivityBlockProps {
   isSelected: boolean;
   onDragStart: () => void;
   onDragEnd: (e: { target: { x(): number; y(): number } }) => void;
+  onDragMove: (e: { target: { x(): number; y(): number } }) => void;
   onClick: (e: { cancelBubble: boolean }) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -20,6 +21,7 @@ export function ActivityBlock({
   isHovered, 
   onDragStart, 
   onDragEnd, 
+  onDragMove,
   onClick, 
   onMouseEnter, 
   onMouseLeave 
@@ -46,6 +48,7 @@ export function ActivityBlock({
       onClick={onClick}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragMove={onDragMove}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

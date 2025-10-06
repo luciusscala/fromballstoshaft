@@ -9,8 +9,8 @@ export const HOTEL_PRESETS: Record<string, HotelPreset> = {
     config: {
       name: 'The Plaza Hotel',
       location: 'New York, NY',
-      checkInDate: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
-      checkOutDate: new Date(Date.now() + (2 * 24 + 2) * 60 * 60 * 1000), // 2 days + 2 hours from now
+      checkInDate: new Date(Date.now() + (6 * 24 + 2) * 60 * 60 * 1000), // 6 days + 2 hours from now (after flight returns)
+      checkOutDate: new Date(Date.now() + (8 * 24 + 2) * 60 * 60 * 1000), // 8 days + 2 hours from now
       roomType: 'Business Suite',
       guests: 1,
       amenities: ['WiFi', 'Business Center', 'Gym', 'Concierge']

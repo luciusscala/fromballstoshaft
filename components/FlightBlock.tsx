@@ -9,6 +9,7 @@ interface FlightBlockProps {
   isHovered: boolean;
   onDragStart: () => void;
   onDragEnd: (e: { target: { x(): number; y(): number } }) => void;
+  onDragMove: (e: { target: { x(): number; y(): number } }) => void;
   onClick: (e: { cancelBubble: boolean }) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -19,6 +20,7 @@ export function FlightBlock({
   isHovered, 
   onDragStart, 
   onDragEnd, 
+  onDragMove,
   onClick, 
   onMouseEnter, 
   onMouseLeave 
@@ -52,6 +54,7 @@ export function FlightBlock({
       onClick={onClick}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragMove={onDragMove}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

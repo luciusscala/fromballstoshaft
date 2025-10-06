@@ -55,6 +55,7 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
     onCreateBlock(block);
   };
 
+
   const handlePasteFlightLink = async () => {
     if (!flightLink.trim()) return;
 
@@ -184,6 +185,7 @@ export function ControlPanel({ onCreateBlock, className = '' }: ControlPanelProp
           ))}
         </div>
       </div>
+
     </div>
   );
 }

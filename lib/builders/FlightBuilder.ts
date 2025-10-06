@@ -31,7 +31,11 @@ export class FlightBuilder {
         arrivalTime: lastSegment.arrivalTime,
         departureAirport: firstSegment.departureAirport,
         arrivalAirport: lastSegment.arrivalAirport
-      }
+      },
+      // Snapping system
+      isSnapped: false,
+      snapGroupId: undefined,
+      snapPosition: undefined
     };
   }
 

@@ -19,7 +19,11 @@ export class ActivityBuilder {
       color: '#8b5cf6', // Purple color for activities
       startTime,
       endTime,
-      duration
+      duration,
+      // Snapping system
+      isSnapped: false,
+      snapGroupId: undefined,
+      snapPosition: undefined
     };
   }
 

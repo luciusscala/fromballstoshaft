@@ -4,6 +4,7 @@ import { Stage, Layer } from 'react-konva';
 import { useCanvasStore } from '../lib/canvasStore';
 import { Block } from './Block';
 import { ControlPanel } from './ControlPanel';
+import { SnapPreview } from './SnapPreview';
 
 interface CanvasProps {
   width: number;
@@ -101,6 +102,7 @@ export function Canvas({ width, height }: CanvasProps) {
           {blocks.map((block) => (
             <Block key={block.id} block={block} />
           ))}
+          <SnapPreview />
         </Layer>
       </Stage>
     </div>

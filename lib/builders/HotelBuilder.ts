@@ -19,7 +19,11 @@ export class HotelBuilder {
       color: '#10b981', // Green color for hotels
       startTime: checkInTime,
       endTime: checkOutTime,
-      duration
+      duration,
+      // Snapping system
+      isSnapped: false,
+      snapGroupId: undefined,
+      snapPosition: undefined
     };
   }
 
