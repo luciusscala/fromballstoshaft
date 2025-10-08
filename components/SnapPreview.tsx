@@ -1,40 +1,53 @@
-// Simplified snap preview component
-import { Group, Rect, Text } from 'react-konva';
+// Simple, effective snap preview
+import { Group, Rect, Text, Circle } from 'react-konva';
 import { useCanvasStore } from '../lib/canvasStore';
 import { TEXT_STYLES } from '../lib/constants/flightTheme';
 
 export function SnapPreview() {
-  const { snapTargetId, snapValid, blocks } = useCanvasStore();
+  const { snapPreview, blocks } = useCanvasStore();
 
-  if (!snapTargetId) return null;
+  if (!snapPreview) return null;
 
-  const targetBlock = blocks.find(b => b.id === snapTargetId);
+  const targetBlock = blocks.find(b => b.id === snapPreview.targetBlockId);
   if (!targetBlock) return null;
 
-  const color = snapValid ? '#10b981' : '#ef4444'; // Green for valid, red for invalid
+  const color = snapPreview.shouldSnap ? '#10b981' : '#ef4444';
+  const message = snapPreview.shouldSnap 
+    ? `✓ Snap to ${snapPreview.snapType}` 
+    : `✕ ${snapPreview.conflict || 'Cannot snap'}`;
 
   return (
     <Group>
-      {/* Simple snap zone highlight */}
+      {/* Snap target outline */}
       <Rect
         x={targetBlock.x - 10}
         y={targetBlock.y - 10}
         width={targetBlock.width + 20}
         height={targetBlock.height + 20}
-        fill={color}
-        opacity={0.2}
         stroke={color}
         strokeWidth={2}
-        cornerRadius={8}
         dash={[5, 5]}
+        fill="transparent"
+        cornerRadius={8}
         listening={false}
       />
       
-      {/* Simple status text */}
+      {/* Snap indicator dot */}
+      <Circle
+        x={targetBlock.x + targetBlock.width / 2}
+        y={targetBlock.y + targetBlock.height / 2}
+        radius={6}
+        fill={color}
+        stroke="white"
+        strokeWidth={2}
+        listening={false}
+      />
+      
+      {/* Status message */}
       <Text
         x={targetBlock.x + targetBlock.width / 2}
         y={targetBlock.y - 25}
-        text={snapValid ? '✓ Can snap' : '✕ Timing conflict'}
+        text={message}
         fontSize={TEXT_STYLES.sizes.legend}
         fontFamily={TEXT_STYLES.fontFamily}
         fill={color}
